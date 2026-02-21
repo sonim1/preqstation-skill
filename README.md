@@ -65,3 +65,52 @@ Example MCP server config:
 - `SKILL.md`: main skill instructions
 - `scripts/preqstation-api.sh`: shell helper wrappers for task APIs
 - `scripts/preqstation-mcp-server.mjs`: MCP stdio server for Codex/Claude Code
+
+## Claude Code MCP Add Command
+
+Register PREQSTATION MCP server with env vars:
+
+```bash
+claude mcp add -s user \
+  --env='PREQSTATION_API_URL=https://<your-domain>' \
+  --env='PREQSTATION_TOKEN=preq_xxxxx' \
+  preqstation -- \
+  node /Users/kendrick/projects/preqstation-skill/scripts/preqstation-mcp-server.mjs
+```
+
+If already registered, remove and re-add:
+
+```bash
+claude mcp remove -s user preqstation
+```
+
+Check registration:
+
+```bash
+claude mcp list
+claude mcp get preqstation
+```
+
+## Codex MCP Add Command
+
+Register PREQSTATION MCP server with env vars:
+
+```bash
+codex mcp add preqstation \
+  --env='PREQSTATION_API_URL=https://<your-domain>' \
+  --env='PREQSTATION_TOKEN=preq_xxxxx' \
+  -- node /Users/kendrick/projects/preqstation-skill/scripts/preqstation-mcp-server.mjs
+```
+
+If already registered, remove and re-add:
+
+```bash
+codex mcp remove preqstation
+```
+
+Check registration:
+
+```bash
+codex mcp list
+codex mcp get preqstation
+```
