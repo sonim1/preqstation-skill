@@ -1,0 +1,13 @@
+{
+  "name": "preqstation-skill",
+  "version": "0.1.0",
+  "description": "PREQSTATION skill and MCP server for Codex and Claude Code",
+  "type": "module",
+  "scripts": {
+    "preq:mcp": "node scripts/preqstation-mcp-server.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^4.3.6"
+  }
+}
