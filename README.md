@@ -55,7 +55,7 @@ Example MCP server config:
 - `preq_list_tasks`: todo/in_progress/review/done/blocked filter
 - `preq_get_task`: fetch single ticket detail by ticket number
 - `preq_start_task`: move ticket to `in_progress`
-- `preq_complete_task`: upload result payload and mark `review` or `done`
+- `preq_complete_task`: upload result payload and mark `review` (In Review)
 - `preq_block_task`: mark `blocked` with reason
 
 `preq_complete_task` writes `result` to PREQSTATION API, and PREQSTATION stores it in work logs so execution results can be verified in the app.

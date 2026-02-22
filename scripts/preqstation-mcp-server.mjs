@@ -177,19 +177,18 @@ server.registerTool(
 server.registerTool(
   "preq_complete_task",
   {
-    title: "Complete PREQSTATION task",
+    title: "Submit PREQSTATION task for review",
     description:
-      "Upload execution result to a task and mark status as review/done. Result is saved into PREQSTATION work logs for verification.",
+      "Upload execution result to a task and mark status as review (In Review). Result is saved into PREQSTATION work logs for verification.",
     inputSchema: {
       taskId: z.string().trim().min(1),
       summary: z.string().trim().min(1).max(4000),
-      status: z.enum(["review", "done"]).optional(),
       tests: z.string().trim().max(4000).optional(),
       prUrl: z.string().trim().url().optional(),
       notes: z.string().trim().max(8000).optional()
     }
   },
-  async ({ taskId, summary, status, tests, prUrl, notes }) => {
+  async ({ taskId, summary, tests, prUrl, notes }) => {
     const resultPayload = {
       summary,
       tests: tests || "",
@@ -201,7 +200,7 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: status || "review",
+        status: "review",
         result: resultPayload
       })
     });

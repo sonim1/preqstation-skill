@@ -44,7 +44,7 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 2. Move status to `in_progress`.
 3. Implement code changes according to acceptance criteria.
 4. Run tests/verification.
-5. Push `status` and `result` back to PREQSTATION with the same ticket number.
+5. Push `status=review` (In Review) and `result` back to PREQSTATION with the same ticket number.
 6. Confirm result appears in PREQSTATION work logs.
 
 ## Mark In Progress
@@ -57,7 +57,7 @@ curl -s -X PATCH \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
 ```
 
-## Submit Review Result
+## Submit In Review Result
 
 ```bash
 curl -s -X PATCH \
