@@ -17,6 +17,8 @@ If MCP is available, prefer `scripts/preqstation-mcp-server.mjs` tools:
 
 - `preq_list_tasks`
 - `preq_get_task`
+- `preq_plan_task`
+- `preq_create_task`
 - `preq_start_task`
 - `preq_complete_task`
 - `preq_block_task`
@@ -46,6 +48,14 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 4. Run tests/verification.
 5. Push `status=review` (In Review) and `result` back to PREQSTATION with the same ticket number.
 6. Confirm result appears in PREQSTATION work logs.
+
+## Inbox -> Todo Plan Flow
+
+1. User adds short task card to Inbox.
+2. Agent loads candidate tasks with `preq_list_tasks` (use `projectKey` + `status=todo` filter).
+3. Agent reads local source code and generates implementation plan with LLM.
+4. Agent calls `preq_plan_task` with `projectKey`, `taskId`, `planMarkdown`, and optional `acceptanceCriteria`.
+5. MCP uploads plan to task description and requests `status=todo`.
 
 ## Mark In Progress
 

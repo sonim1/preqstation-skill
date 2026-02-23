@@ -52,13 +52,17 @@ Example MCP server config:
 
 ## Exposed MCP Tools
 
-- `preq_list_tasks`: todo/in_progress/review/done/blocked filter
+- `preq_list_tasks`: todo/in_progress/review/done/blocked filter (`projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
+- `preq_plan_task`: improve an existing task with generated plan markdown and request `todo` status in a specific project key
+- `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: move ticket to `in_progress`
 - `preq_complete_task`: upload result payload and mark `review` (In Review)
 - `preq_block_task`: mark `blocked` with reason
 
 `preq_complete_task` writes `result` to PREQSTATION API, and PREQSTATION stores it in work logs so execution results can be verified in the app.
+`preq_create_task` omits `status` on create so the server stores it as internal `inbox` (API task view may appear as `todo` due mapping).
+`preq_plan_task` is intended for the Inbox -> Todo planning workflow: user drops short card in Inbox, agent builds plan from local code context, then updates the existing task with that plan and requests `todo`.
 
 ## Files
 

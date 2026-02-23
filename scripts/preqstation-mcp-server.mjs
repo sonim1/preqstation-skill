@@ -106,6 +106,29 @@ function summarizeTask(task) {
   };
 }
 
+function normalizeProjectKey(input) {
+  const normalized = input.trim().toUpperCase();
+  if (!normalized) {
+    throw new Error("projectKey is required.");
+  }
+  if (!/^[A-Z0-9][A-Z0-9_-]{0,19}$/.test(normalized)) {
+    throw new Error("projectKey must use letters/numbers/underscore/hyphen and be 1-20 chars.");
+  }
+  return normalized;
+}
+
+function getTaskKey(task) {
+  const taskKey = typeof task?.task_key === "string" ? task.task_key.trim() : "";
+  if (taskKey) return taskKey;
+  const id = typeof task?.id === "string" ? task.id.trim() : "";
+  return id;
+}
+
+function belongsToProjectKey(task, projectKey) {
+  const taskKey = getTaskKey(task).toUpperCase();
+  return taskKey.startsWith(`${projectKey}-`);
+}
+
 const server = new McpServer({
   name: "preqstation-mcp",
   version: "1.0.0"
@@ -119,21 +142,26 @@ server.registerTool(
     inputSchema: {
       status: z.enum(PREQ_TASK_STATUSES).optional(),
       label: z.string().trim().min(1).max(40).optional(),
+      projectKey: z.string().trim().min(1).max(20).optional(),
       limit: z.number().int().min(1).max(200).optional()
     }
   },
-  async ({ status, label, limit }) => {
+  async ({ status, label, projectKey, limit }) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (label) query.set("label", label);
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
     const result = await preqRequest(`/api/tasks${suffix}`);
     const tasks = Array.isArray(result.tasks) ? result.tasks : [];
-    const sliced = limit ? tasks.slice(0, limit) : tasks;
+    const normalizedProjectKey = projectKey ? normalizeProjectKey(projectKey) : null;
+    const filtered = normalizedProjectKey ? tasks.filter((task) => belongsToProjectKey(task, normalizedProjectKey)) : tasks;
+    const sliced = limit ? filtered.slice(0, limit) : filtered;
 
     return contentText({
       count: sliced.length,
-      total: tasks.length,
+      total: filtered.length,
+      total_api_tasks: tasks.length,
+      project_key: normalizedProjectKey,
       tasks: sliced.map(summarizeTask)
     });
   }
@@ -151,6 +179,95 @@ server.registerTool(
   async ({ taskId }) => {
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     return contentText(result);
+  }
+);
+
+server.registerTool(
+  "preq_plan_task",
+  {
+    title: "Refine task with generated plan (Inbox -> Todo)",
+    description:
+      "Improve an existing project task by uploading generated plan content and requesting status todo. Use after reading local code and generating plan with LLM.",
+    inputSchema: {
+      projectKey: z.string().trim().min(1).max(20),
+      taskId: z.string().trim().min(1),
+      planMarkdown: z.string().trim().min(1).max(50000),
+      acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
+      priority: z.enum(["highest", "high", "medium", "none", "low", "lowest"]).optional(),
+      labels: z.array(z.string().trim().min(1).max(40)).max(20).optional()
+    }
+  },
+  async ({ projectKey, taskId, planMarkdown, acceptanceCriteria, priority, labels }) => {
+    const normalizedProjectKey = normalizeProjectKey(projectKey);
+    const found = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
+    const task = found.task || found;
+
+    if (!belongsToProjectKey(task, normalizedProjectKey)) {
+      throw new Error(`Task ${taskId} does not belong to project key ${normalizedProjectKey}.`);
+    }
+
+    const payload = {
+      description: planMarkdown,
+      status: "todo",
+      ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
+      ...(priority ? { priority } : {}),
+      ...(labels ? { labels } : {})
+    };
+
+    const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+
+    return contentText({
+      task: result.task || null,
+      project_key: normalizedProjectKey,
+      requested_status: "todo",
+      plan_updated: true
+    });
+  }
+);
+
+server.registerTool(
+  "preq_create_task",
+  {
+    title: "Create PREQSTATION task (Inbox)",
+    description:
+      "Create a new PREQSTATION task and place it in Inbox. This uses /api/tasks and omits status so server default maps to internal inbox.",
+    inputSchema: {
+      title: z.string().trim().min(1).max(180),
+      repo: z.string().trim().min(1).max(2000),
+      description: z.string().trim().max(50000).optional(),
+      priority: z.enum(["highest", "high", "medium", "none", "low", "lowest"]).optional(),
+      labels: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+      acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
+      branch: z.string().trim().max(200).optional(),
+      assignee: z.string().trim().max(120).optional(),
+      engine: z.string().trim().max(60).optional()
+    }
+  },
+  async ({ title, repo, description, priority, labels, acceptanceCriteria, branch, assignee, engine }) => {
+    const payload = {
+      title,
+      repo,
+      description: description || "",
+      priority: priority || "none",
+      ...(labels ? { labels } : {}),
+      ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
+      ...(branch ? { branch } : {}),
+      ...(assignee ? { assignee } : {}),
+      ...(engine ? { engine } : {})
+    };
+
+    const result = await preqRequest("/api/tasks", {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+
+    return contentText({
+      task: result.task || null,
+      requested_status: "inbox"
+    });
   }
 );
 
