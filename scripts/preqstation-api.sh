@@ -18,9 +18,15 @@ PREQSTATION_API_URL="${PREQSTATION_API_URL%/}"
 
 preq_get_tasks() {
   local status="${1:-}"
+  local engine="${2:-}"
   local url="$PREQSTATION_API_URL/api/tasks"
+  local sep="?"
   if [[ -n "$status" ]]; then
-    url="$url?status=$status"
+    url="$url${sep}status=$status"
+    sep="&"
+  fi
+  if [[ -n "$engine" ]]; then
+    url="$url${sep}engine=$engine"
   fi
   curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$url"
 }
