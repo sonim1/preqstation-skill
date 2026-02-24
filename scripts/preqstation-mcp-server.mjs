@@ -44,6 +44,7 @@ try {
 }
 
 const PREQ_TASK_STATUSES = ["todo", "in_progress", "review", "done", "blocked"];
+const PREQ_ENGINES = ["claude", "codex", "gemini"];
 
 function encodeTaskId(taskId) {
   return encodeURIComponent(taskId.trim());
@@ -101,6 +102,7 @@ function summarizeTask(task) {
     status: task?.status ?? null,
     priority: task?.priority ?? null,
     repo: task?.repo ?? null,
+    engine: task?.engine ?? null,
     labels: Array.isArray(task?.labels) ? task.labels : [],
     updated_at: task?.updated_at ?? null
   };
@@ -138,18 +140,20 @@ server.registerTool(
   "preq_list_tasks",
   {
     title: "List PREQSTATION tasks",
-    description: "List PREQSTATION tasks by status/label. Use this when no ticket number is provided and you need to pick work.",
+    description: "List PREQSTATION tasks by status/label/engine. Use this when no ticket number is provided and you need to pick work.",
     inputSchema: {
       status: z.enum(PREQ_TASK_STATUSES).optional(),
       label: z.string().trim().min(1).max(40).optional(),
       projectKey: z.string().trim().min(1).max(20).optional(),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Filter tasks by engine (claude, codex, gemini). Use your own engine value."),
       limit: z.number().int().min(1).max(200).optional()
     }
   },
-  async ({ status, label, projectKey, limit }) => {
+  async ({ status, label, projectKey, engine, limit }) => {
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (label) query.set("label", label);
+    if (engine) query.set("engine", engine);
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
     const result = await preqRequest(`/api/tasks${suffix}`);
     const tasks = Array.isArray(result.tasks) ? result.tasks : [];
@@ -243,7 +247,7 @@ server.registerTool(
       acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
       branch: z.string().trim().max(200).optional(),
       assignee: z.string().trim().max(120).optional(),
-      engine: z.string().trim().max(60).optional()
+      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude, codex, gemini).")
     }
   },
   async ({ title, repo, description, priority, labels, acceptanceCriteria, branch, assignee, engine }) => {
