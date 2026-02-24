@@ -185,9 +185,9 @@ server.registerTool(
 server.registerTool(
   "preq_plan_task",
   {
-    title: "Refine task with generated plan (Inbox -> Todo)",
+    title: "Plan task and move to Todo",
     description:
-      "Improve an existing project task by uploading generated plan content and requesting status todo. Use after reading local code and generating plan with LLM.",
+      "Improve an existing project task by uploading generated plan content and moving the card to todo. Use after reading local code and generating plan with LLM.",
     inputSchema: {
       projectKey: z.string().trim().min(1).max(20),
       taskId: z.string().trim().min(1),
@@ -296,7 +296,7 @@ server.registerTool(
   {
     title: "Submit PREQSTATION task for review",
     description:
-      "Upload execution result to a task and mark status as review (In Review). Result is saved into PREQSTATION work logs for verification.",
+      "After work is done in in_progress, upload execution result and move task to review (In Review). Result is saved into PREQSTATION work logs for verification.",
     inputSchema: {
       taskId: z.string().trim().min(1),
       summary: z.string().trim().min(1).max(4000),
@@ -306,6 +306,15 @@ server.registerTool(
     }
   },
   async ({ taskId, summary, tests, prUrl, notes }) => {
+    const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
+    const existingTask = existing.task || existing;
+    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
+    if (currentStatus !== "in_progress") {
+      throw new Error(
+        `Task ${taskId} must be in_progress before moving to In Review. Current status: ${currentStatus || "unknown"}.`
+      );
+    }
+
     const resultPayload = {
       summary,
       tests: tests || "",

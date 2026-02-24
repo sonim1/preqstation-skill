@@ -49,13 +49,15 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 5. Push `status=review` (In Review) and `result` back to PREQSTATION with the same ticket number.
 6. Confirm result appears in PREQSTATION work logs.
 
+`preq_complete_task` must be used only after the task is moved to `in_progress`.
+
 ## Inbox -> Todo Plan Flow
 
 1. User adds short task card to Inbox.
 2. Agent loads candidate tasks with `preq_list_tasks` (use `projectKey` + `status=todo` filter).
 3. Agent reads local source code and generates implementation plan with LLM.
 4. Agent calls `preq_plan_task` with `projectKey`, `taskId`, `planMarkdown`, and optional `acceptanceCriteria`.
-5. MCP uploads plan to task description and requests `status=todo`.
+5. MCP uploads plan to task description and moves the card to `status=todo`.
 
 ## Mark In Progress
 
