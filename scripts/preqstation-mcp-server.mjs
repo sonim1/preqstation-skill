@@ -17,7 +17,6 @@ function normalizeApiUrl(input) {
     throw new Error("PREQSTATION_API_URL must be a valid URL.");
   }
 
-  // Security: require TLS for remote endpoints. Allow plain HTTP only for localhost development.
   const isLocalhost = parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1" || parsed.hostname === "::1";
   const isHttps = parsed.protocol === "https:";
   const isLocalHttp = isLocalhost && parsed.protocol === "http:";
@@ -77,7 +76,6 @@ async function preqRequest(path, init = {}) {
   }
 
   if (!response.ok) {
-    // Security: avoid leaking raw upstream error bodies that may contain sensitive server details.
     throw new Error(`PREQSTATION API request failed with status ${response.status}.`);
   }
 
@@ -136,6 +134,7 @@ const server = new McpServer({
   version: "1.0.0"
 });
 
+// ── preq_list_tasks ──────────────────────────────────────────────────────────
 server.registerTool(
   "preq_list_tasks",
   {
@@ -171,6 +170,7 @@ server.registerTool(
   }
 );
 
+// ── preq_get_task ────────────────────────────────────────────────────────────
 server.registerTool(
   "preq_get_task",
   {
@@ -186,6 +186,7 @@ server.registerTool(
   }
 );
 
+// ── preq_plan_task ───────────────────────────────────────────────────────────
 server.registerTool(
   "preq_plan_task",
   {
@@ -198,10 +199,11 @@ server.registerTool(
       planMarkdown: z.string().trim().min(1).max(50000),
       acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
       priority: z.enum(["highest", "high", "medium", "none", "low", "lowest"]).optional(),
-      labels: z.array(z.string().trim().min(1).max(40)).max(20).optional()
+      labels: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude, codex, gemini).")
     }
   },
-  async ({ projectKey, taskId, planMarkdown, acceptanceCriteria, priority, labels }) => {
+  async ({ projectKey, taskId, planMarkdown, acceptanceCriteria, priority, labels, engine }) => {
     const normalizedProjectKey = normalizeProjectKey(projectKey);
     const found = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const task = found.task || found;
@@ -215,7 +217,8 @@ server.registerTool(
       status: "todo",
       ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
       ...(priority ? { priority } : {}),
-      ...(labels ? { labels } : {})
+      ...(labels ? { labels } : {}),
+      ...(engine ? { engine } : {})
     };
 
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
@@ -232,6 +235,7 @@ server.registerTool(
   }
 );
 
+// ── preq_create_task ─────────────────────────────────────────────────────────
 server.registerTool(
   "preq_create_task",
   {
@@ -275,26 +279,32 @@ server.registerTool(
   }
 );
 
+// ── preq_start_task ──────────────────────────────────────────────────────────
 server.registerTool(
   "preq_start_task",
   {
     title: "Start PREQSTATION task",
     description: "Move task to in_progress by ticket number.",
     inputSchema: {
-      taskId: z.string().trim().min(1)
+      taskId: z.string().trim().min(1),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine starting this task (claude, codex, gemini).")
     }
   },
-  async ({ taskId }) => {
+  async ({ taskId, engine }) => {
+    const payload = {
+      status: "in_progress",
+      ...(engine ? { engine } : {})
+    };
+
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        status: "in_progress"
-      })
+      body: JSON.stringify(payload)
     });
     return contentText(result);
   }
 );
 
+// ── preq_complete_task ───────────────────────────────────────────────────────
 server.registerTool(
   "preq_complete_task",
   {
@@ -306,10 +316,11 @@ server.registerTool(
       summary: z.string().trim().min(1).max(4000),
       tests: z.string().trim().max(4000).optional(),
       prUrl: z.string().trim().url().optional(),
-      notes: z.string().trim().max(8000).optional()
+      notes: z.string().trim().max(8000).optional(),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine that executed this task (claude, codex, gemini).")
     }
   },
-  async ({ taskId, summary, tests, prUrl, notes }) => {
+  async ({ taskId, summary, tests, prUrl, notes, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
@@ -319,11 +330,14 @@ server.registerTool(
       );
     }
 
+    const resolvedEngine = engine || existingTask?.engine || "";
+
     const resultPayload = {
       summary,
       tests: tests || "",
       pr_url: prUrl || "",
       notes: notes || "",
+      engine: resolvedEngine,
       completed_at: new Date().toISOString()
     };
 
@@ -331,7 +345,8 @@ server.registerTool(
       method: "PATCH",
       body: JSON.stringify({
         status: "review",
-        result: resultPayload
+        result: resultPayload,
+        ...(resolvedEngine ? { engine: resolvedEngine } : {})
       })
     });
 
@@ -342,6 +357,7 @@ server.registerTool(
   }
 );
 
+// ── preq_block_task ──────────────────────────────────────────────────────────
 server.registerTool(
   "preq_block_task",
   {
@@ -349,12 +365,14 @@ server.registerTool(
     description: "Mark task as blocked and upload blocking reason.",
     inputSchema: {
       taskId: z.string().trim().min(1),
-      reason: z.string().trim().min(1).max(4000)
+      reason: z.string().trim().min(1).max(4000),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine reporting the block (claude, codex, gemini).")
     }
   },
-  async ({ taskId, reason }) => {
+  async ({ taskId, reason, engine }) => {
     const resultPayload = {
       reason,
+      ...(engine ? { engine } : {}),
       blocked_at: new Date().toISOString()
     };
 
@@ -362,7 +380,8 @@ server.registerTool(
       method: "PATCH",
       body: JSON.stringify({
         status: "blocked",
-        result: resultPayload
+        result: resultPayload,
+        ...(engine ? { engine } : {})
       })
     });
 
