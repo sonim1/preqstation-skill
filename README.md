@@ -25,6 +25,12 @@ export PREQSTATION_API_URL="https://your-preqstation-domain.vercel.app"
 export PREQSTATION_TOKEN="preq_xxxxxxxxxxxxxxxxx"
 ```
 
+Optional (when client name auto-detection is unavailable):
+
+```bash
+export PREQSTATION_ENGINE="codex" # claude | codex | gemini
+```
+
 ## MCP Plugin Setup (Codex / Claude Code)
 
 Add an MCP server entry that launches:
@@ -59,6 +65,13 @@ Example MCP server config:
 - `preq_start_task`: move ticket to `in_progress`
 - `preq_complete_task`: from `in_progress`, upload result payload and mark `review` (In Review)
 - `preq_block_task`: mark `blocked` with reason
+
+Engine is always attached by MCP mutation tools (`create/plan/start/complete/block`) using this priority:
+1. Explicit `engine` argument
+2. Existing task `engine` (for plan/complete flows)
+3. MCP client `initialize.clientInfo.name` auto-detection
+4. `PREQSTATION_ENGINE` env var (if set)
+5. Fallback: `codex`
 
 `preq_complete_task` requires current status `in_progress`; then it writes `result` and moves task to `review` (In Review). PREQSTATION stores this in work logs for verification.
 `preq_create_task` omits `status` on create so the server stores it as internal `inbox` (API task view may appear as `todo` due mapping).

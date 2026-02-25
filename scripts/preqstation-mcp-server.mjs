@@ -44,6 +44,42 @@ try {
 
 const PREQ_TASK_STATUSES = ["todo", "in_progress", "review", "done", "blocked"];
 const PREQ_ENGINES = ["claude", "codex", "gemini"];
+const PREQ_ENGINE_SET = new Set(PREQ_ENGINES);
+let detectedClientEngine = null;
+
+function normalizeEngineValue(input) {
+  const value = typeof input === "string" ? input.trim().toLowerCase() : "";
+  if (!value) return null;
+  return PREQ_ENGINE_SET.has(value) ? value : null;
+}
+
+function inferEngineFromClientInfo(clientInfo) {
+  const rawName = typeof clientInfo?.name === "string" ? clientInfo.name : "";
+  const name = rawName.trim().toLowerCase();
+  if (!name) return null;
+  if (name.includes("claude")) return "claude";
+  if (name.includes("gemini")) return "gemini";
+  if (name.includes("codex") || name.includes("openai") || name.includes("chatgpt")) return "codex";
+  return null;
+}
+
+const PREQ_DEFAULT_ENGINE_RAW = (process.env.PREQSTATION_ENGINE || "").trim();
+const PREQ_DEFAULT_ENGINE = PREQ_DEFAULT_ENGINE_RAW
+  ? normalizeEngineValue(PREQ_DEFAULT_ENGINE_RAW)
+  : "codex";
+if (PREQ_DEFAULT_ENGINE_RAW && !PREQ_DEFAULT_ENGINE) {
+  console.error("PREQSTATION_ENGINE must be one of: claude, codex, gemini.");
+  process.exit(1);
+}
+
+function resolveEngine(primary, fallback) {
+  return (
+    normalizeEngineValue(primary) ||
+    normalizeEngineValue(fallback) ||
+    detectedClientEngine ||
+    PREQ_DEFAULT_ENGINE
+  );
+}
 
 function encodeTaskId(taskId) {
   return encodeURIComponent(taskId.trim());
@@ -133,6 +169,10 @@ const server = new McpServer({
   name: "preqstation-mcp",
   version: "1.0.0"
 });
+server.server.oninitialized = () => {
+  const clientInfo = server.server.getClientVersion();
+  detectedClientEngine = inferEngineFromClientInfo(clientInfo);
+};
 
 // ── preq_list_tasks ──────────────────────────────────────────────────────────
 server.registerTool(
@@ -149,10 +189,11 @@ server.registerTool(
     }
   },
   async ({ status, label, projectKey, engine, limit }) => {
+    const resolvedEngine = resolveEngine(engine);
     const query = new URLSearchParams();
     if (status) query.set("status", status);
     if (label) query.set("label", label);
-    if (engine) query.set("engine", engine);
+    query.set("engine", resolvedEngine);
     const suffix = query.size > 0 ? `?${query.toString()}` : "";
     const result = await preqRequest(`/api/tasks${suffix}`);
     const tasks = Array.isArray(result.tasks) ? result.tasks : [];
@@ -207,6 +248,7 @@ server.registerTool(
     const normalizedProjectKey = normalizeProjectKey(projectKey);
     const found = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const task = found.task || found;
+    const resolvedEngine = resolveEngine(engine, task?.engine);
 
     if (!belongsToProjectKey(task, normalizedProjectKey)) {
       throw new Error(`Task ${taskId} does not belong to project key ${normalizedProjectKey}.`);
@@ -215,10 +257,10 @@ server.registerTool(
     const payload = {
       description: planMarkdown,
       status: "todo",
+      engine: resolvedEngine,
       ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
       ...(priority ? { priority } : {}),
-      ...(labels ? { labels } : {}),
-      ...(engine ? { engine } : {})
+      ...(labels ? { labels } : {})
     };
 
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
@@ -255,16 +297,17 @@ server.registerTool(
     }
   },
   async ({ title, repo, description, priority, labels, acceptanceCriteria, branch, assignee, engine }) => {
+    const resolvedEngine = resolveEngine(engine);
     const payload = {
       title,
       repo,
       description: description || "",
+      engine: resolvedEngine,
       priority: priority || "none",
       ...(labels ? { labels } : {}),
       ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
       ...(branch ? { branch } : {}),
-      ...(assignee ? { assignee } : {}),
-      ...(engine ? { engine } : {})
+      ...(assignee ? { assignee } : {})
     };
 
     const result = await preqRequest("/api/tasks", {
@@ -291,9 +334,10 @@ server.registerTool(
     }
   },
   async ({ taskId, engine }) => {
+    const resolvedEngine = resolveEngine(engine);
     const payload = {
       status: "in_progress",
-      ...(engine ? { engine } : {})
+      engine: resolvedEngine
     };
 
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
@@ -330,7 +374,7 @@ server.registerTool(
       );
     }
 
-    const resolvedEngine = engine || existingTask?.engine || "";
+    const resolvedEngine = resolveEngine(engine, existingTask?.engine);
 
     const resultPayload = {
       summary,
@@ -370,9 +414,10 @@ server.registerTool(
     }
   },
   async ({ taskId, reason, engine }) => {
+    const resolvedEngine = resolveEngine(engine);
     const resultPayload = {
       reason,
-      ...(engine ? { engine } : {}),
+      engine: resolvedEngine,
       blocked_at: new Date().toISOString()
     };
 
@@ -381,7 +426,7 @@ server.registerTool(
       body: JSON.stringify({
         status: "blocked",
         result: resultPayload,
-        ...(engine ? { engine } : {})
+        engine: resolvedEngine
       })
     });
 

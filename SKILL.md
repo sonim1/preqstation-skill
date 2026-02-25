@@ -11,6 +11,7 @@ description: >
 
 - `PREQSTATION_API_URL`: PREQSTATION API base URL (example: `https://mypreqstation.vercel.app`)
 - `PREQSTATION_TOKEN`: PREQSTATION Bearer token (generated in PREQSTATION `/api-keys`)
+- `PREQSTATION_ENGINE` (optional): fallback engine (`claude` | `codex` | `gemini`) when client auto-detection is unavailable
 
 ## Agent Identity & Engine Mapping
 
@@ -27,7 +28,12 @@ Always include your `engine` value when listing, creating, planning, starting, c
 ## MCP Plugin Mode (Recommended)
 
 If MCP is available, prefer `scripts/preqstation-mcp-server.mjs` tools.
-All mutation tools accept an optional `engine` parameter:
+All mutation tools accept an optional `engine` parameter and always send an engine value using this order:
+1. explicit tool arg
+2. existing task engine (when available)
+3. MCP `initialize.clientInfo.name` auto-detection
+4. `PREQSTATION_ENGINE`
+5. `codex` fallback
 
 | Tool                 | engine usage                                                      |
 | -------------------- | ----------------------------------------------------------------- |
