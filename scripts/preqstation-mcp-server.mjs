@@ -348,6 +348,35 @@ server.registerTool(
   }
 );
 
+// ── preq_update_task_status ──────────────────────────────────────────────────
+server.registerTool(
+  "preq_update_task_status",
+  {
+    title: "Update PREQSTATION task status only",
+    description: "Update only task status (todo/in_progress/review/done) via the status-only endpoint.",
+    inputSchema: {
+      taskId: z.string().trim().min(1),
+      status: z.enum(["todo", "in_progress", "review", "done"]),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine updating this task status (claude, codex, gemini).")
+    }
+  },
+  async ({ taskId, status, engine }) => {
+    const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
+    const existingTask = existing.task || existing;
+    const resolvedEngine = resolveEngine(engine, existingTask?.engine);
+    const payload = {
+      status,
+      ...(resolvedEngine ? { engine: resolvedEngine } : {})
+    };
+
+    const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}/status`, {
+      method: "PATCH",
+      body: JSON.stringify(payload)
+    });
+    return contentText(result);
+  }
+);
+
 // ── preq_complete_task ───────────────────────────────────────────────────────
 server.registerTool(
   "preq_complete_task",

@@ -15,7 +15,7 @@ description: >
 
 ## Agent Identity & Engine Mapping
 
-Each agent must identify itself and use the corresponding `engine` value in **all** task operations (list, create, plan, start, complete, block):
+Each agent must identify itself and use the corresponding `engine` value in **all** task operations (list, create, plan, start, update status, complete, block):
 
 | If you are...        | Use `engine=` |
 | -------------------- | ------------- |
@@ -42,6 +42,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_plan_task`     | Assign `engine` when planning task → todo                         |
 | `preq_create_task`   | Assign `engine` to new inbox task                                 |
 | `preq_start_task`    | Record `engine` starting the work → in_progress                   |
+| `preq_update_task_status` | Record `engine` while updating status-only endpoint (`/api/tasks/:id/status`) |
 | `preq_complete_task` | Record `engine` in work log result → review (fallback to task's existing engine) |
 | `preq_block_task`    | Record `engine` reporting the block → blocked                     |
 
@@ -59,6 +60,7 @@ All mutation helpers accept an `engine` parameter:
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
+| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]`        |
 | `preq_plan_task`      | `preq_plan_task <task_id> <plan_markdown> [engine]`              |
 | `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes]` |
 | `preq_block_task`     | `preq_block_task <task_id> <reason> [engine]`                    |
@@ -121,6 +123,15 @@ curl -s -X PATCH \
   -H "Content-Type: application/json" \
   -d '{"status":"in_progress","engine":"claude"}' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
+```
+
+## Update Status Only (with Engine)
+```bash
+curl -s -X PATCH \
+  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status":"done","engine":"claude"}' \
+  "$PREQSTATION_API_URL/api/tasks/$TASK_ID/status" | jq .
 ```
 
 ## Submit In Review Result (with Engine)

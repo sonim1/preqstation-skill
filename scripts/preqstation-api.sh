@@ -71,6 +71,23 @@ preq_start_task() {
   preq_patch_task "$task_id" "$payload"
 }
 
+preq_update_task_status() {
+  local task_id="$1"
+  local status="$2"
+  local engine="${3:-}"
+  local payload
+  payload=$(jq -n \
+    --arg status "$status" \
+    --arg engine "$engine" \
+    '{status: $status} + (if $engine != "" then {engine: $engine} else {} end)'
+  )
+  curl -s -X PATCH \
+    -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "$PREQSTATION_API_URL/api/tasks/$task_id/status"
+}
+
 preq_plan_task() {
   local task_id="$1"
   local plan_markdown="$2"

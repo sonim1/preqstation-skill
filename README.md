@@ -63,10 +63,11 @@ Example MCP server config:
 - `preq_plan_task`: improve an existing task with generated plan markdown and move the card to `todo` in a specific project key
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: move ticket to `in_progress`
+- `preq_update_task_status`: status-only update (`todo`/`in_progress`/`review`/`done`) via `/api/tasks/:id/status`
 - `preq_complete_task`: from `in_progress`, upload result payload and mark `review` (In Review)
 - `preq_block_task`: mark `blocked` with reason
 
-Engine is always attached by MCP mutation tools (`create/plan/start/complete/block`) using this priority:
+Engine is always attached by MCP mutation tools (`create/plan/start/update_status/complete/block`) using this priority:
 1. Explicit `engine` argument
 2. Existing task `engine` (for plan/complete flows)
 3. MCP client `initialize.clientInfo.name` auto-detection
