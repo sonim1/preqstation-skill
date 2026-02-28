@@ -42,7 +42,7 @@ try {
   process.exit(1);
 }
 
-const PREQ_TASK_STATUSES = ["todo", "in_progress", "review", "done", "blocked"];
+const PREQ_TASK_STATUSES = ["inbox", "todo", "in_progress", "review", "done", "blocked"];
 const PREQ_ENGINES = ["claude", "codex", "gemini"];
 const PREQ_ENGINE_SET = new Set(PREQ_ENGINES);
 let detectedClientEngine = null;
