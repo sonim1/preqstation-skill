@@ -60,7 +60,7 @@ All mutation helpers accept an `engine` parameter:
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
-| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]`        |
+| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]` (`status`: `inbox`/`todo`/`in_progress`/`in_review`/`done`/`archived`, `review` alias 지원) |
 | `preq_plan_task`      | `preq_plan_task <task_id> <plan_markdown> [engine]`              |
 | `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes]` |
 | `preq_block_task`     | `preq_block_task <task_id> <reason> [engine]`                    |

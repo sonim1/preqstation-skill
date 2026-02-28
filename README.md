@@ -63,7 +63,7 @@ Example MCP server config:
 - `preq_plan_task`: improve an existing task with generated plan markdown and move the card to `todo` in a specific project key
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: move ticket to `in_progress`
-- `preq_update_task_status`: status-only update (`todo`/`in_progress`/`review`/`done`) via `/api/tasks/:id/status`
+- `preq_update_task_status`: status-only update (`inbox`/`todo`/`in_progress`/`in_review`/`done`/`archived`) via `/api/tasks/:id/status` (`review` alias supported)
 - `preq_complete_task`: from `in_progress`, upload result payload and mark `review` (In Review)
 - `preq_block_task`: mark `blocked` with reason
 

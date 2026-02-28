@@ -43,6 +43,7 @@ try {
 }
 
 const PREQ_TASK_STATUSES = ["inbox", "todo", "in_progress", "review", "done", "blocked"];
+const TASK_STATUS_ONLY_STATUSES = ["inbox", "todo", "in_progress", "in_review", "done", "archived", "review"];
 const PREQ_ENGINES = ["claude", "codex", "gemini"];
 const PREQ_ENGINE_SET = new Set(PREQ_ENGINES);
 let detectedClientEngine = null;
@@ -353,10 +354,10 @@ server.registerTool(
   "preq_update_task_status",
   {
     title: "Update PREQSTATION task status only",
-    description: "Update only task status (todo/in_progress/review/done) via the status-only endpoint.",
+    description: "Update only task status via the status-only endpoint.",
     inputSchema: {
       taskId: z.string().trim().min(1),
-      status: z.enum(["todo", "in_progress", "review", "done"]),
+      status: z.enum(TASK_STATUS_ONLY_STATUSES),
       engine: z.enum(PREQ_ENGINES).optional().describe("Engine updating this task status (claude, codex, gemini).")
     }
   },
@@ -364,8 +365,9 @@ server.registerTool(
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
+    const normalizedStatus = status === "review" ? "in_review" : status;
     const payload = {
-      status,
+      status: normalizedStatus,
       ...(resolvedEngine ? { engine: resolvedEngine } : {})
     };
 
