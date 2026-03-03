@@ -37,7 +37,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 
 | Tool                 | engine usage                                                      |
 | -------------------- | ----------------------------------------------------------------- |
-| `preq_list_tasks`    | Filter tasks by `engine`                                          |
+| `preq_list_tasks`    | Read-only, no engine needed                                       |
 | `preq_get_task`      | Read-only, no engine needed                                       |
 | `preq_plan_task`     | Assign `engine` when planning task → todo                         |
 | `preq_create_task`   | Assign `engine` to new inbox task                                 |
@@ -56,8 +56,8 @@ All mutation helpers accept an `engine` parameter:
 
 | Function              | Signature                                                        |
 | --------------------- | ---------------------------------------------------------------- |
-| `preq_get_tasks`      | `preq_get_tasks [status] [engine] [label]`                       |
-| `preq_get_task`       | `preq_get_task <task_id>`                                        |
+| `preq_get_tasks`      | `preq_get_tasks [status] [label]` (read-only, no engine needed)  |
+| `preq_get_task`       | `preq_get_task <task_id>` (read-only, no engine needed)          |
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
@@ -93,16 +93,25 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 3. Create a feature branch from `main` (e.g. `preq/<task-id>`).
 4. Implement code changes according to acceptance criteria.
 5. Run tests/verification locally on the feature branch.
-6. **Push the feature branch to origin and verify** — this step is mandatory before moving to review.
+6. **Push the feature branch to origin — HARD REQUIREMENT**.
+   No task may transition to `review` or `done` without a verified remote push.
    ```bash
    git add -A
    git commit -m "preq/<task-id>: <short summary>"
    git push origin preq/<task-id>
-   # Verify the push succeeded — never skip this
-   git log --oneline origin/preq/<task-id> -1
    ```
-   **WARNING**: Do NOT mark the task as review until `git push` succeeds and `origin/preq/<task-id>` is confirmed. Work that only exists in the local worktree will be lost.
-7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number.
+   After pushing, **you must verify the remote branch exists**:
+   ```bash
+   git ls-remote --heads origin preq/<task-id>
+   ```
+   If `git ls-remote` returns empty, the push failed. Retry or block the task — do NOT proceed.
+
+   > **CRITICAL**: A local-only commit is equivalent to no work done.
+   > If changes exist only in the worktree or local branch and are not
+   > pushed to origin, they WILL be lost. Never report a task as complete
+   > unless `git ls-remote` confirms the branch on origin.
+
+7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number. Include the remote branch name in the result:
 8. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
 9. Confirm result appears in PREQSTATION work logs.
 
@@ -149,6 +158,13 @@ curl -s -X PATCH \
 ```
 
 ## Submit In Review Result (with Engine)
+
+Before submitting, verify the feature branch exists on origin:
+```bash
+git ls-remote --heads origin preq/$TASK_ID
+# If empty, push failed — do NOT proceed
+```
+
 ```bash
 curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
@@ -159,6 +175,7 @@ curl -s -X PATCH \
     "result":{
       "summary":"Implemented rate limiting for login endpoint",
       "engine":"claude",
+      "branch":"preq/<task-id>",
       "pr_url":"https://github.com/org/repo/pull/123",
       "tests":"npm run test",
       "completed_at":"2025-02-24T12:00:00Z"
