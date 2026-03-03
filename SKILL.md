@@ -90,11 +90,13 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 
 1. Fetch the task detail from PREQSTATION (verify `engine` matches your identity).
 2. Move status to `in_progress` with your `engine`.
-3. Implement code changes according to acceptance criteria.
-4. Run tests/verification.
-5. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number.
-6. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
-7. Confirm result appears in PREQSTATION work logs.
+3. Create a feature branch from `main` (e.g. `preq/<task-id>`).
+4. Implement code changes according to acceptance criteria.
+5. Run tests/verification locally on the feature branch.
+6. Push the feature branch to origin (`git push origin preq/<task-id>`).
+7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number.
+8. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
+9. Confirm result appears in PREQSTATION work logs.
 
 `preq_complete_task` must be used only after the task is moved to `in_progress`.
 `preq_review_task` must be used only after the task is in `review` status (i.e. after `preq_complete_task`).
