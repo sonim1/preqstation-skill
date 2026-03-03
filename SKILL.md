@@ -93,7 +93,15 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 3. Create a feature branch from `main` (e.g. `preq/<task-id>`).
 4. Implement code changes according to acceptance criteria.
 5. Run tests/verification locally on the feature branch.
-6. Push the feature branch to origin (`git push origin preq/<task-id>`).
+6. **Push the feature branch to origin and verify** — this step is mandatory before moving to review.
+   ```bash
+   git add -A
+   git commit -m "preq/<task-id>: <short summary>"
+   git push origin preq/<task-id>
+   # Verify the push succeeded — never skip this
+   git log --oneline origin/preq/<task-id> -1
+   ```
+   **WARNING**: Do NOT mark the task as review until `git push` succeeds and `origin/preq/<task-id>` is confirmed. Work that only exists in the local worktree will be lost.
 7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number.
 8. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
 9. Confirm result appears in PREQSTATION work logs.
