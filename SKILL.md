@@ -15,7 +15,7 @@ description: >
 
 ## Agent Identity & Engine Mapping
 
-Each agent must identify itself and use the corresponding `engine` value in **all** task operations (list, create, plan, start, update status, complete, block):
+Each agent must identify itself and use the corresponding `engine` value in **all** task operations (list, create, plan, start, update status, complete, review, block):
 
 | If you are...        | Use `engine=` |
 | -------------------- | ------------- |
@@ -23,7 +23,7 @@ Each agent must identify itself and use the corresponding `engine` value in **al
 | GPT / Codex (OpenAI) | `codex`       |
 | Gemini (Google)      | `gemini`      |
 
-Always include your `engine` value when listing, creating, planning, starting, completing, or blocking tasks.
+Always include your `engine` value when listing, creating, planning, starting, completing, reviewing, or blocking tasks.
 
 ## MCP Plugin Mode (Recommended)
 
@@ -44,6 +44,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_start_task`    | Record `engine` starting the work → in_progress                   |
 | `preq_update_task_status` | Record `engine` while updating status-only endpoint (`/api/tasks/:id/status`) |
 | `preq_complete_task` | Record `engine` in work log result → review (fallback to task's existing engine) |
+| `preq_review_task`   | Record `engine` running verification (tests, build, lint) → done  |
 | `preq_block_task`    | Record `engine` reporting the block → blocked                     |
 
 This gives deterministic task-id based execution and result upload.
@@ -60,13 +61,14 @@ All mutation helpers accept an `engine` parameter:
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
-| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]` (`status`: `inbox`/`todo`/`in_progress`/`in_review`/`done`/`archived`, `review` alias 지원) |
+| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]` (`status`: `inbox`/`todo`/`in_progress`/`in_review`/`done`/`archived`, supports `review` alias) |
 | `preq_plan_task`      | `preq_plan_task <task_id> <plan_markdown> [engine]`              |
 | `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes]` |
+| `preq_review_task`    | `preq_review_task <task_id> [engine] [test_cmd] [build_cmd] [lint_cmd]` |
 | `preq_block_task`     | `preq_block_task <task_id> <reason> [engine]`                    |
 | `preq_delete_task`    | `preq_delete_task <task_id>`                                     |
 
-Requires `jq` for JSON construction in plan/complete/block helpers.
+Requires `jq` for JSON construction in plan/complete/review/block helpers.
 
 ## List Todo Tasks
 
@@ -91,9 +93,11 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 3. Implement code changes according to acceptance criteria.
 4. Run tests/verification.
 5. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number.
-6. Confirm result appears in PREQSTATION work logs.
+6. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
+7. Confirm result appears in PREQSTATION work logs.
 
 `preq_complete_task` must be used only after the task is moved to `in_progress`.
+`preq_review_task` must be used only after the task is in `review` status (i.e. after `preq_complete_task`).
 
 ## Inbox → Todo Plan Flow
 
@@ -148,6 +152,64 @@ curl -s -X PATCH \
       "pr_url":"https://github.com/org/repo/pull/123",
       "tests":"npm run test",
       "completed_at":"2025-02-24T12:00:00Z"
+    }
+  }' \
+  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
+```
+
+## Review Task (with Engine)
+
+Runs verification steps (E2E tests, unit tests, build, lint) against the completed work.
+On all checks passing, moves the task status from `review` to `done`.
+On failure, moves the task status to `blocked` with failure details.
+
+```bash
+# MCP mode
+# preq_review_task automatically runs verification and transitions status
+
+# Shell mode
+preq_review_task "$TASK_ID" "claude" "npm run test" "npm run build" "npm run lint"
+
+# Manual curl equivalent
+# 1. Run verification commands locally
+npm run test && npm run build && npm run lint
+
+# 2. On success, move to done
+curl -s -X PATCH \
+  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status":"done",
+    "engine":"claude",
+    "result":{
+      "summary":"All checks passed: tests, build, lint",
+      "engine":"claude",
+      "verified_at":"2025-02-24T12:30:00Z",
+      "checks":{
+        "tests":"pass",
+        "build":"pass",
+        "lint":"pass"
+      }
+    }
+  }' \
+  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
+
+# 3. On failure, block with details
+curl -s -X PATCH \
+  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "status":"blocked",
+    "engine":"claude",
+    "result":{
+      "reason":"Unit tests failed: 3 failures in auth.test.js",
+      "engine":"claude",
+      "blocked_at":"2025-02-24T12:30:00Z",
+      "checks":{
+        "tests":"fail",
+        "build":"pass",
+        "lint":"pass"
+      }
     }
   }' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
