@@ -39,6 +39,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | -------------------- | ----------------------------------------------------------------- |
 | `preq_list_tasks`    | Read-only, no engine needed                                       |
 | `preq_get_task`      | Read-only, no engine needed                                       |
+| `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key) |
 | `preq_sync_projects` | Read-only, no engine needed (uploads project sync batch to backend) |
 | `preq_plan_task`     | Assign `engine` when planning task → todo                         |
 | `preq_create_task`   | Assign `engine` to new inbox task                                 |
@@ -60,6 +61,7 @@ All mutation helpers accept an `engine` parameter:
 | --------------------- | ---------------------------------------------------------------- |
 | `preq_get_tasks`      | `preq_get_tasks [status] [label]` (read-only, no engine needed)  |
 | `preq_get_task`       | `preq_get_task <task_id>` (read-only, no engine needed)          |
+| `preq_get_project_settings` | `preq_get_project_settings <project_key>` (read-only, deploy settings by key) |
 | `preq_sync_projects`  | `preq_sync_projects '<json_payload>'` (project sync batch upload) |
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
@@ -90,38 +92,77 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
 ```
 
+## Deployment Strategy Contract (required)
+
+Before any git action, resolve deployment strategy through MCP:
+
+1. Call `preq_get_task <task_id>`.
+2. Read `task.deploy_strategy` from the response.
+3. If missing, call `preq_get_project_settings <project_key>` and resolve from:
+   - `settings.deploy_strategy`
+   - `settings.deploy_default_branch`
+   - `settings.deploy_auto_pr`
+   - `settings.deploy_commit_on_review`
+
+Expected values from PREQSTATION backend:
+
+- `strategy`: `direct_commit` | `feature_branch` | `none`
+- `default_branch`: string (usually `main`)
+- `auto_pr`: boolean
+- `commit_on_review`: boolean
+
+Default when absent/invalid:
+
+- `strategy=none`
+- `default_branch=main`
+- `auto_pr=false`
+- `commit_on_review=true`
+
+Behavior by `strategy`:
+
+- `none`: do not run git commit/push/PR. Only code changes + task update result.
+- `direct_commit`: commit directly on `default_branch` and push `origin <default_branch>`. Do not create PR.
+- `feature_branch`: use task `branch` (or fallback branch), push `origin <branch>`, and create PR only when `auto_pr=true`.
+
+Rule for `commit_on_review`:
+
+- if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `review` until remote push is verified.
+- if `false`, review transition is allowed without mandatory remote push.
+
 ## Recommended Execution Flow
 
-1. Fetch the task detail from PREQSTATION (verify `engine` matches your identity).
-2. Move status to `in_progress` with your `engine`.
-3. Resolve `branch_name` from task detail (`task.branch` / `branch`). If empty, fallback to `preq/<task-id>`.
-   ```bash
-   BRANCH_NAME=$(preq_resolve_branch_name "$TASK_ID")
-   git checkout -B "$BRANCH_NAME" main
-   ```
+1. Fetch task detail from PREQSTATION (`preq_get_task`) and verify `engine`.
+2. Resolve deployment strategy config using the contract above.
+3. Move status to `in_progress` with your `engine`.
 4. Implement code changes according to acceptance criteria.
-5. Run tests/verification locally on the feature branch.
-6. **Push the feature branch to origin — HARD REQUIREMENT**.
-   No task may transition to `review` or `done` without a verified remote push.
-   ```bash
-   git add -A
-   git commit -m "$BRANCH_NAME: <short summary>"
-   git push -u origin "$BRANCH_NAME"
-   ```
-   After pushing, **you must verify the remote branch exists**:
-   ```bash
-   git ls-remote --heads origin "$BRANCH_NAME"
-   ```
-   If `git ls-remote` returns empty, the push failed. Retry or block the task — do NOT proceed.
-
-   > **CRITICAL**: A local-only commit is equivalent to no work done.
-   > If changes exist only in the worktree or local branch and are not
-   > pushed to origin, they WILL be lost. Never report a task as complete
-   > unless `git ls-remote` confirms the branch on origin.
-
-7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number. Include `branch_name` in both task `branch` and result payload:
-8. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
-9. Confirm result appears in PREQSTATION work logs.
+5. Run tests/verification locally.
+6. Execute git flow by strategy:
+   - `none`: skip git commands.
+   - `direct_commit`:
+     ```bash
+     git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
+     git add -A
+     git commit -m "$TASK_ID: <short summary>"
+     git push origin "$DEFAULT_BRANCH"
+     git ls-remote --heads origin "$DEFAULT_BRANCH"
+     ```
+   - `feature_branch`:
+     ```bash
+     BRANCH_NAME=$(preq_resolve_branch_name "$TASK_ID")
+     git checkout -B "$BRANCH_NAME" "$DEFAULT_BRANCH"
+     git add -A
+     git commit -m "$BRANCH_NAME: <short summary>"
+     git push -u origin "$BRANCH_NAME"
+     git ls-remote --heads origin "$BRANCH_NAME"
+     ```
+     If `auto_pr=true`, create PR (example):
+     ```bash
+     gh pr create --base "$DEFAULT_BRANCH" --head "$BRANCH_NAME" --fill
+     ```
+7. If `commit_on_review=true` and required remote branch/ref is missing, retry push or block task (do not mark review/done).
+8. Push `status=review` with `preq_complete_task` (include `branch_name` and `pr_url` when available).
+9. Run `preq_review_task` to verify and move status to `done`.
+10. Confirm result appears in PREQSTATION work logs.
 
 `preq_complete_task` must be used only after the task is moved to `in_progress`.
 `preq_review_task` must be used only after the task is in `review` status (i.e. after `preq_complete_task`).

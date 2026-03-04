@@ -243,6 +243,29 @@ server.registerTool(
   }
 );
 
+// ── preq_get_project_settings ────────────────────────────────────────────────
+server.registerTool(
+  "preq_get_project_settings",
+  {
+    title: "Get PREQSTATION project settings",
+    description:
+      "Get project settings by project key (deploy_strategy/deploy_default_branch/deploy_auto_pr/deploy_commit_on_review).",
+    inputSchema: {
+      projectKey: z.string().trim().min(1).max(20),
+    },
+  },
+  async ({ projectKey }) => {
+    const normalizedProjectKey = normalizeProjectKey(projectKey);
+    const result = await preqRequest(
+      `/api/projects/${encodeURIComponent(normalizedProjectKey)}/settings`,
+    );
+    return contentText({
+      project_key: normalizedProjectKey,
+      settings: result?.settings || {},
+    });
+  },
+);
+
 // ── preq_sync_projects ───────────────────────────────────────────────────────
 server.registerTool(
   "preq_sync_projects",

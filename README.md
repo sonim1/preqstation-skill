@@ -60,6 +60,7 @@ Example MCP server config:
 
 - `preq_list_tasks`: todo/in_progress/review/done/blocked filter (`projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
+- `preq_get_project_settings`: fetch project settings by key (`/api/projects/:key/settings`)
 - `preq_sync_projects`: verify local project directories and upload one batch sync result to `/api/projects/sync`
 - `preq_plan_task`: improve an existing task with generated plan markdown and move the card to `todo` in a specific project key
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
@@ -86,6 +87,14 @@ Branch handling:
 - `preq_complete_task` now supports optional branch propagation:
   - MCP: `branchName` input
   - Shell helper: 7th argument `[branch_name]`
+
+Deployment strategy handling (required before git actions):
+- Resolve strategy from `preq_get_task` response: `deploy_strategy.strategy/default_branch/auto_pr/commit_on_review`.
+- If missing in task payload, fetch `preq_get_project_settings <projectKey>` and use `settings.deploy_*`.
+- Execute git flow by strategy:
+  - `none`: no git commit/push/PR
+  - `direct_commit`: commit/push `default_branch`
+  - `feature_branch`: push feature branch, create PR only when `auto_pr=true`
 
 ## Files
 

@@ -41,6 +41,11 @@ preq_get_task() {
   curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$PREQSTATION_API_URL/api/tasks/$task_id"
 }
 
+preq_get_project_settings() {
+  local project_key="$1"
+  curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$PREQSTATION_API_URL/api/projects/$project_key/settings"
+}
+
 preq_sync_projects() {
   local json_payload="$1"
   curl -s -X POST \
