@@ -60,6 +60,7 @@ Example MCP server config:
 
 - `preq_list_tasks`: todo/in_progress/review/done/blocked filter (`projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
+- `preq_sync_projects`: verify local project directories and upload one batch sync result to `/api/projects/sync`
 - `preq_plan_task`: improve an existing task with generated plan markdown and move the card to `todo` in a specific project key
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: move ticket to `in_progress`

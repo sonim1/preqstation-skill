@@ -39,6 +39,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | -------------------- | ----------------------------------------------------------------- |
 | `preq_list_tasks`    | Read-only, no engine needed                                       |
 | `preq_get_task`      | Read-only, no engine needed                                       |
+| `preq_sync_projects` | Read-only, no engine needed (uploads project sync batch to backend) |
 | `preq_plan_task`     | Assign `engine` when planning task → todo                         |
 | `preq_create_task`   | Assign `engine` to new inbox task                                 |
 | `preq_start_task`    | Record `engine` starting the work → in_progress                   |
@@ -59,6 +60,7 @@ All mutation helpers accept an `engine` parameter:
 | --------------------- | ---------------------------------------------------------------- |
 | `preq_get_tasks`      | `preq_get_tasks [status] [label]` (read-only, no engine needed)  |
 | `preq_get_task`       | `preq_get_task <task_id>` (read-only, no engine needed)          |
+| `preq_sync_projects`  | `preq_sync_projects '<json_payload>'` (project sync batch upload) |
 | `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
 | `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
@@ -123,6 +125,15 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 
 `preq_complete_task` must be used only after the task is moved to `in_progress`.
 `preq_review_task` must be used only after the task is in `review` status (i.e. after `preq_complete_task`).
+
+## Project Sync Flow
+
+Use this flow when user triggers "preqstation sync" from OpenClaw:
+
+1. Build project list as `{ projectKey, localPath }` pairs from the caller context (for example OpenClaw `MEMORY.md` mappings).
+2. Check each `localPath` exists as a directory.
+3. Submit **one batch** sync payload to PREQSTATION with `preq_sync_projects`.
+4. Backend records sync status per project; Projects view shows synced/not-synced state.
 
 ## Inbox → Todo Plan Flow
 
