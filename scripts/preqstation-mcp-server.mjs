@@ -432,6 +432,71 @@ server.registerTool(
   }
 );
 
+// ── preq_review_task ─────────────────────────────────────────────────────────
+server.registerTool(
+  "preq_review_task",
+  {
+    title: "Review PREQSTATION task",
+    description:
+      "Verify completed work and move task from review to done. Run verification (tests, build, lint) before calling this tool. On verification failure, use preq_block_task instead.",
+    inputSchema: {
+      taskId: z.string().trim().min(1),
+      summary: z.string().trim().min(1).max(4000).optional(),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine running verification (claude, codex, gemini).")
+    }
+  },
+  async ({ taskId, summary, engine }) => {
+    const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
+    const existingTask = existing.task || existing;
+    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
+    if (currentStatus !== "in_review" && currentStatus !== "review") {
+      throw new Error(
+        `Task ${taskId} must be in review before moving to done. Current status: ${currentStatus || "unknown"}.`
+      );
+    }
+
+    const resolvedEngine = resolveEngine(engine, existingTask?.engine);
+
+    const resultPayload = {
+      summary: summary || "All checks passed",
+      engine: resolvedEngine,
+      verified_at: new Date().toISOString()
+    };
+
+    const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({
+        status: "done",
+        result: resultPayload,
+        ...(resolvedEngine ? { engine: resolvedEngine } : {})
+      })
+    });
+
+    return contentText({
+      task: result.task || null,
+      uploaded_result: resultPayload
+    });
+  }
+);
+
+// ── preq_delete_task ─────────────────────────────────────────────────────────
+server.registerTool(
+  "preq_delete_task",
+  {
+    title: "Delete PREQSTATION task",
+    description: "Permanently delete a task by ticket number or UUID.",
+    inputSchema: {
+      taskId: z.string().trim().min(1)
+    }
+  },
+  async ({ taskId }) => {
+    await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
+      method: "DELETE"
+    });
+    return contentText({ deleted: true, taskId });
+  }
+);
+
 // ── preq_block_task ──────────────────────────────────────────────────────────
 server.registerTool(
   "preq_block_task",

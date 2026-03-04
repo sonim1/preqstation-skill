@@ -151,6 +151,81 @@ preq_block_task() {
   preq_patch_task "$task_id" "$payload"
 }
 
+preq_review_task() {
+  local task_id="$1"
+  local engine="${2:-}"
+  local test_cmd="${3:-}"
+  local build_cmd="${4:-}"
+  local lint_cmd="${5:-}"
+
+  local checks_json='{}'
+  local all_passed=true
+
+  if [[ -n "$test_cmd" ]]; then
+    if eval "$test_cmd" >/dev/null 2>&1; then
+      checks_json=$(echo "$checks_json" | jq '. + {tests: "pass"}')
+    else
+      checks_json=$(echo "$checks_json" | jq '. + {tests: "fail"}')
+      all_passed=false
+    fi
+  fi
+
+  if [[ -n "$build_cmd" ]]; then
+    if eval "$build_cmd" >/dev/null 2>&1; then
+      checks_json=$(echo "$checks_json" | jq '. + {build: "pass"}')
+    else
+      checks_json=$(echo "$checks_json" | jq '. + {build: "fail"}')
+      all_passed=false
+    fi
+  fi
+
+  if [[ -n "$lint_cmd" ]]; then
+    if eval "$lint_cmd" >/dev/null 2>&1; then
+      checks_json=$(echo "$checks_json" | jq '. + {lint: "pass"}')
+    else
+      checks_json=$(echo "$checks_json" | jq '. + {lint: "fail"}')
+      all_passed=false
+    fi
+  fi
+
+  if [[ "$all_passed" == "true" ]]; then
+    local payload
+    payload=$(jq -n \
+      --arg engine "$engine" \
+      --arg verified_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --argjson checks "$checks_json" \
+      '{
+        status: "done",
+        result: {
+          summary: "All checks passed",
+          verified_at: $verified_at,
+          checks: $checks
+        } + (if $engine != "" then {engine: $engine} else {} end)
+      } + (if $engine != "" then {engine: $engine} else {} end)'
+    )
+    preq_patch_task "$task_id" "$payload"
+  else
+    local failed_checks
+    failed_checks=$(echo "$checks_json" | jq -r 'to_entries | map(select(.value == "fail")) | map(.key) | join(", ")')
+    local payload
+    payload=$(jq -n \
+      --arg engine "$engine" \
+      --arg blocked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+      --arg reason "Verification failed: $failed_checks" \
+      --argjson checks "$checks_json" \
+      '{
+        status: "blocked",
+        result: {
+          reason: $reason,
+          blocked_at: $blocked_at,
+          checks: $checks
+        } + (if $engine != "" then {engine: $engine} else {} end)
+      } + (if $engine != "" then {engine: $engine} else {} end)'
+    )
+    preq_patch_task "$task_id" "$payload"
+  fi
+}
+
 preq_delete_task() {
   local task_id="$1"
   curl -s -X DELETE \

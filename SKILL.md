@@ -46,6 +46,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_complete_task` | Record `engine` in work log result → review (fallback to task's existing engine) |
 | `preq_review_task`   | Record `engine` running verification (tests, build, lint) → done  |
 | `preq_block_task`    | Record `engine` reporting the block → blocked                     |
+| `preq_delete_task`   | Permanently delete a task by ticket number or UUID                |
 
 This gives deterministic task-id based execution and result upload.
 
