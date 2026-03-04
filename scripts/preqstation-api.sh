@@ -41,6 +41,18 @@ preq_get_task() {
   curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$PREQSTATION_API_URL/api/tasks/$task_id"
 }
 
+preq_resolve_branch_name() {
+  local task_id="$1"
+  local fallback="${2:-preq/$task_id}"
+  local branch_name
+  branch_name=$(preq_get_task "$task_id" | jq -r '.task.branch // .branch // empty')
+  if [[ -n "$branch_name" ]]; then
+    echo "$branch_name"
+  else
+    echo "$fallback"
+  fi
+}
+
 preq_create_task() {
   local json_payload="$1"
   curl -s -X POST \
@@ -109,6 +121,7 @@ preq_complete_task() {
   local pr_url="${4:-}"
   local tests="${5:-}"
   local notes="${6:-}"
+  local branch_name="${7:-}"
   local payload
   payload=$(jq -n \
     --arg summary "$summary" \
@@ -116,6 +129,7 @@ preq_complete_task() {
     --arg pr_url "$pr_url" \
     --arg tests "$tests" \
     --arg notes "$notes" \
+    --arg branch "$branch_name" \
     --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{
       status: "review",
@@ -123,10 +137,11 @@ preq_complete_task() {
         summary: $summary,
         tests: $tests,
         pr_url: $pr_url,
-        notes: $notes,
+        notes: $notes
+      } + (if $branch != "" then {branch: $branch} else {} end) + {
         completed_at: $completed_at
       } + (if $engine != "" then {engine: $engine} else {} end)
-    } + (if $engine != "" then {engine: $engine} else {} end)'
+    } + (if $branch != "" then {branch: $branch} else {} end) + (if $engine != "" then {engine: $engine} else {} end)'
   )
   preq_patch_task "$task_id" "$payload"
 }

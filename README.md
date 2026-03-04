@@ -80,6 +80,12 @@ Engine is always attached by MCP mutation tools (`create/plan/start/update_statu
 `preq_create_task` omits `status` on create so the server stores it as internal `inbox` (API task view may appear as `todo` due mapping).
 `preq_plan_task` is intended for the Inbox -> Todo planning workflow: user drops short card in Inbox, agent builds plan from local code context, then updates the existing task with that plan and moves it to `todo`.
 
+Branch handling:
+- Use task `branch` as canonical `branch_name` for git push/PR when present.
+- `preq_complete_task` now supports optional branch propagation:
+  - MCP: `branchName` input
+  - Shell helper: 7th argument `[branch_name]`
+
 ## Files
 
 - `SKILL.md`: main skill instructions

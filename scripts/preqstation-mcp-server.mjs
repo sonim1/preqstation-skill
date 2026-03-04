@@ -392,10 +392,11 @@ server.registerTool(
       tests: z.string().trim().max(4000).optional(),
       prUrl: z.string().trim().url().optional(),
       notes: z.string().trim().max(8000).optional(),
+      branchName: z.string().trim().max(200).optional(),
       engine: z.enum(PREQ_ENGINES).optional().describe("Engine that executed this task (claude, codex, gemini).")
     }
   },
-  async ({ taskId, summary, tests, prUrl, notes, engine }) => {
+  async ({ taskId, summary, tests, prUrl, notes, branchName, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
@@ -406,12 +407,16 @@ server.registerTool(
     }
 
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
+    const resolvedBranchName =
+      (typeof branchName === "string" ? branchName.trim() : "") ||
+      (typeof existingTask?.branch === "string" ? existingTask.branch.trim() : "");
 
     const resultPayload = {
       summary,
       tests: tests || "",
       pr_url: prUrl || "",
       notes: notes || "",
+      ...(resolvedBranchName ? { branch: resolvedBranchName } : {}),
       engine: resolvedEngine,
       completed_at: new Date().toISOString()
     };
@@ -421,6 +426,7 @@ server.registerTool(
       body: JSON.stringify({
         status: "review",
         result: resultPayload,
+        ...(resolvedBranchName ? { branch: resolvedBranchName } : {}),
         ...(resolvedEngine ? { engine: resolvedEngine } : {})
       })
     });

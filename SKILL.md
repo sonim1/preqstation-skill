@@ -64,10 +64,11 @@ All mutation helpers accept an `engine` parameter:
 | `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
 | `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]` (`status`: `inbox`/`todo`/`in_progress`/`in_review`/`done`/`archived`, supports `review` alias) |
 | `preq_plan_task`      | `preq_plan_task <task_id> <plan_markdown> [engine]`              |
-| `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes]` |
+| `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes] [branch_name]` |
 | `preq_review_task`    | `preq_review_task <task_id> [engine] [test_cmd] [build_cmd] [lint_cmd]` |
 | `preq_block_task`     | `preq_block_task <task_id> <reason> [engine]`                    |
 | `preq_delete_task`    | `preq_delete_task <task_id>`                                     |
+| `preq_resolve_branch_name` | `preq_resolve_branch_name <task_id> [fallback_branch]`      |
 
 Requires `jq` for JSON construction in plan/complete/review/block helpers.
 
@@ -91,19 +92,23 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
 
 1. Fetch the task detail from PREQSTATION (verify `engine` matches your identity).
 2. Move status to `in_progress` with your `engine`.
-3. Create a feature branch from `main` (e.g. `preq/<task-id>`).
+3. Resolve `branch_name` from task detail (`task.branch` / `branch`). If empty, fallback to `preq/<task-id>`.
+   ```bash
+   BRANCH_NAME=$(preq_resolve_branch_name "$TASK_ID")
+   git checkout -B "$BRANCH_NAME" main
+   ```
 4. Implement code changes according to acceptance criteria.
 5. Run tests/verification locally on the feature branch.
 6. **Push the feature branch to origin — HARD REQUIREMENT**.
    No task may transition to `review` or `done` without a verified remote push.
    ```bash
    git add -A
-   git commit -m "preq/<task-id>: <short summary>"
-   git push origin preq/<task-id>
+   git commit -m "$BRANCH_NAME: <short summary>"
+   git push -u origin "$BRANCH_NAME"
    ```
    After pushing, **you must verify the remote branch exists**:
    ```bash
-   git ls-remote --heads origin preq/<task-id>
+   git ls-remote --heads origin "$BRANCH_NAME"
    ```
    If `git ls-remote` returns empty, the push failed. Retry or block the task — do NOT proceed.
 
@@ -112,7 +117,7 @@ curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
    > pushed to origin, they WILL be lost. Never report a task as complete
    > unless `git ls-remote` confirms the branch on origin.
 
-7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number. Include the remote branch name in the result:
+7. Push `status=review` (In Review) and `result` back to PREQSTATION with your `engine` and the same ticket number. Include `branch_name` in both task `branch` and result payload:
 8. Run `preq_review_task` to verify the work (E2E/unit tests, build, lint). On success, move status to `done`.
 9. Confirm result appears in PREQSTATION work logs.
 
@@ -162,7 +167,7 @@ curl -s -X PATCH \
 
 Before submitting, verify the feature branch exists on origin:
 ```bash
-git ls-remote --heads origin preq/$TASK_ID
+git ls-remote --heads origin "$BRANCH_NAME"
 # If empty, push failed — do NOT proceed
 ```
 
@@ -173,10 +178,11 @@ curl -s -X PATCH \
   -d '{
     "status":"review",
     "engine":"claude",
+    "branch":"<branch_name>",
     "result":{
       "summary":"Implemented rate limiting for login endpoint",
       "engine":"claude",
-      "branch":"preq/<task-id>",
+      "branch":"<branch_name>",
       "pr_url":"https://github.com/org/repo/pull/123",
       "tests":"npm run test",
       "completed_at":"2025-02-24T12:00:00Z"
