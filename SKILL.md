@@ -151,12 +151,26 @@ Rule for `commit_on_review`:
    **todo** — full execution:
    - `preq_start_task`
    - Implement code changes and run tests.
-   - Execute git flow per deployment strategy contract above.
+   - **Deploy (REQUIRED before preq_complete_task):**
+     - `direct_commit`: merge worktree into `default_branch` and push:
+       ```
+       git -C <project_cwd> checkout <default_branch>
+       git -C <project_cwd> pull origin <default_branch>
+       git -C <project_cwd> merge --squash <worktree_branch>   # if squash_merge=true
+       git -C <project_cwd> commit -m "<task_id>: <summary>"
+       git -C <project_cwd> push origin <default_branch>
+       ```
+     - `feature_branch`: push worktree branch, optionally create PR:
+       ```
+       git -C <project_cwd> push origin <worktree_branch>
+       # if auto_pr=true: create PR targeting default_branch
+       ```
+     - `none`: skip git operations.
    - `preq_complete_task` with summary, branch, pr_url.
 
    **in_progress** — continue execution:
    - Continue implementation and run tests.
-   - Execute git flow per deployment strategy contract above.
+   - **Deploy (same rules as todo above).**
    - `preq_complete_task` with summary, branch, pr_url.
 
    **review** — verification only:
