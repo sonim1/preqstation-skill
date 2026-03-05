@@ -234,7 +234,7 @@ server.registerTool(
   {
     title: "Get PREQSTATION project settings",
     description:
-      "Get project settings by project key (deploy_strategy/deploy_default_branch/deploy_auto_pr/deploy_commit_on_review).",
+      "Get project settings by project key (deploy_strategy/deploy_default_branch/deploy_auto_pr/deploy_commit_on_review/deploy_squash_merge).",
     inputSchema: {
       projectKey: z.string().trim().min(1).max(20),
     },

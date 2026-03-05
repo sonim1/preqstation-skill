@@ -87,13 +87,15 @@ Before any git action, resolve deployment strategy through MCP:
    - `settings.deploy_default_branch`
    - `settings.deploy_auto_pr`
    - `settings.deploy_commit_on_review`
+   - `settings.deploy_squash_merge`
 
 Expected values from PREQSTATION backend:
 
 - `strategy`: `direct_commit` | `feature_branch` | `none`
 - `default_branch`: string (usually `main`)
-- `auto_pr`: boolean
+- `auto_pr`: boolean (feature_branch only)
 - `commit_on_review`: boolean
+- `squash_merge`: boolean (direct_commit only)
 
 Default when absent/invalid:
 
@@ -101,12 +103,13 @@ Default when absent/invalid:
 - `default_branch=main`
 - `auto_pr=false`
 - `commit_on_review=true`
+- `squash_merge=true`
 
 Behavior by `strategy`:
 
 - `none`: do not run git commit/push/PR. Only code changes + task update result.
-- `direct_commit`: commit directly on `default_branch` and push `origin <default_branch>`. Do not create PR.
-- `feature_branch`: use task `branch` (or fallback branch), push `origin <branch>`, and create PR only when `auto_pr=true`.
+- `direct_commit`: commit directly on `default_branch` and push `origin <default_branch>`. Do not create PR. When `squash_merge=true`, squash all worktree commits into a single commit when merging to the default branch (e.g. `git merge --squash <worktree_branch>`).
+- `feature_branch`: use task `branch` (or fallback branch), push `origin <branch>`, and create PR only when `auto_pr=true` (requires GitHub MCP on the agent).
 
 Rule for `commit_on_review`:
 
