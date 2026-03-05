@@ -108,8 +108,30 @@ Default when absent/invalid:
 Behavior by `strategy`:
 
 - `none`: do not run git commit/push/PR. Only code changes + task update result.
-- `direct_commit`: commit directly on `default_branch` and push `origin <default_branch>`. Do not create PR. When `squash_merge=true`, squash all worktree commits into a single commit when merging to the default branch (e.g. `git merge --squash <worktree_branch>`).
-- `feature_branch`: use task `branch` (or fallback branch), push `origin <branch>`, and create PR only when `auto_pr=true` (requires GitHub MCP on the agent).
+
+- `direct_commit`: merge worktree commits into `default_branch` and push. No PR.
+  After completing work in the worktree:
+  ```bash
+  # In primary checkout: update and merge
+  git -C <project_cwd> checkout <default_branch>
+  git -C <project_cwd> pull origin <default_branch>
+
+  # squash_merge=true (default): single commit
+  git -C <project_cwd> merge --squash <worktree_branch>
+  git -C <project_cwd> commit -m "<task_id>: <summary>"
+
+  # squash_merge=false: regular merge
+  git -C <project_cwd> merge <worktree_branch>
+
+  # Push to remote
+  git -C <project_cwd> push origin <default_branch>
+  ```
+
+- `feature_branch`: push worktree branch to remote. Create PR only when `auto_pr=true` (requires GitHub MCP on the agent).
+  ```bash
+  git -C <project_cwd> push origin <worktree_branch>
+  # if auto_pr=true: create PR via GitHub MCP or gh CLI
+  ```
 
 Rule for `commit_on_review`:
 
