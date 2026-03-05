@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-import { stat } from "node:fs/promises";
-
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
@@ -168,19 +166,6 @@ function belongsToProjectKey(task, projectKey) {
   return taskKey.startsWith(`${projectKey}-`);
 }
 
-async function resolveLocalPathSyncState(localPath) {
-  const normalizedPath = localPath.trim();
-  try {
-    const pathStat = await stat(normalizedPath);
-    if (pathStat.isDirectory()) {
-      return { synced: true, reason: "" };
-    }
-    return { synced: false, reason: "not_directory" };
-  } catch {
-    return { synced: false, reason: "path_not_found" };
-  }
-}
-
 const server = new McpServer({
   name: "preqstation-mcp",
   version: "1.0.0"
@@ -262,60 +247,6 @@ server.registerTool(
     return contentText({
       project_key: normalizedProjectKey,
       settings: result?.settings || {},
-    });
-  },
-);
-
-// ── preq_sync_projects ───────────────────────────────────────────────────────
-server.registerTool(
-  "preq_sync_projects",
-  {
-    title: "Sync project local paths",
-    description:
-      "Check local project directories and upload one batch sync result to PREQSTATION backend. A project is synced when the local path exists as a directory.",
-    inputSchema: {
-      projects: z
-        .array(
-          z.object({
-            projectKey: z.string().trim().min(1).max(20),
-            localPath: z.string().trim().min(1).max(4000),
-          }),
-        )
-        .min(1)
-        .max(500),
-    },
-  },
-  async ({ projects }) => {
-    const checkedAt = new Date().toISOString();
-    const normalizedProjects = projects.map((project) => ({
-      projectKey: normalizeProjectKey(project.projectKey),
-      localPath: project.localPath.trim(),
-    }));
-
-    const results = await Promise.all(
-      normalizedProjects.map(async (project) => {
-        const syncState = await resolveLocalPathSyncState(project.localPath);
-        return {
-          project_key: project.projectKey,
-          local_path: project.localPath,
-          synced: syncState.synced,
-          checked_at: checkedAt,
-          reason: syncState.reason,
-        };
-      }),
-    );
-
-    const backendResult = await preqRequest("/api/projects/sync", {
-      method: "POST",
-      body: JSON.stringify({ results }),
-    });
-
-    return contentText({
-      total: results.length,
-      synced_count: results.filter((item) => item.synced).length,
-      unsynced_count: results.filter((item) => !item.synced).length,
-      backend: backendResult,
-      results,
     });
   },
 );

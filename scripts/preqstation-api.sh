@@ -46,15 +46,6 @@ preq_get_project_settings() {
   curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$PREQSTATION_API_URL/api/projects/$project_key/settings"
 }
 
-preq_sync_projects() {
-  local json_payload="$1"
-  curl -s -X POST \
-    -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-    -H "Content-Type: application/json" \
-    -d "$json_payload" \
-    "$PREQSTATION_API_URL/api/projects/sync"
-}
-
 preq_resolve_branch_name() {
   local task_id="$1"
   local fallback="${2:-preq/$task_id}"
