@@ -76,21 +76,7 @@ All mutation helpers accept an `engine` parameter:
 
 Requires `jq` for JSON construction in plan/complete/review/block helpers.
 
-## List Todo Tasks
-
-List todo tasks assigned to your engine:
-```bash
-# Replace ENGINE with your engine value (claude, codex, or gemini)
-curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  "$PREQSTATION_API_URL/api/tasks?status=todo&engine=ENGINE" | jq .
-```
-
-## Fetch Task Detail
-```bash
-TASK_ID="<task-id>"
-curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
+For curl examples, see `docs/curl-examples.md`.
 
 ## Deployment Strategy Contract (required)
 
@@ -129,49 +115,39 @@ Rule for `commit_on_review`:
 - if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `review` until remote push is verified.
 - if `false`, review transition is allowed without mandatory remote push.
 
-## Recommended Execution Flow
+## Execution Flow
 
-1. Fetch task detail from PREQSTATION (`preq_get_task`) and verify `engine`.
-2. Resolve deployment strategy config using the contract above.
-3. Move status to `in_progress` with your `engine`.
-4. Implement code changes according to acceptance criteria.
-5. Run tests/verification locally.
-6. Execute git flow by strategy:
-   - `none`: skip git commands.
-   - `direct_commit`:
-     ```bash
-     git checkout -B "$DEFAULT_BRANCH" "origin/$DEFAULT_BRANCH"
-     git add -A
-     git commit -m "$TASK_ID: <short summary>"
-     git push origin "$DEFAULT_BRANCH"
-     git ls-remote --heads origin "$DEFAULT_BRANCH"
-     ```
-   - `feature_branch`:
-     ```bash
-     BRANCH_NAME=$(preq_resolve_branch_name "$TASK_ID")
-     git checkout -B "$BRANCH_NAME" "$DEFAULT_BRANCH"
-     git add -A
-     git commit -m "$BRANCH_NAME: <short summary>"
-     git push -u origin "$BRANCH_NAME"
-     git ls-remote --heads origin "$BRANCH_NAME"
-     ```
-     If `auto_pr=true`, create PR (example):
-     ```bash
-     gh pr create --base "$DEFAULT_BRANCH" --head "$BRANCH_NAME" --fill
-     ```
-7. If `commit_on_review=true` and required remote branch/ref is missing, retry push or block task (do not mark review/done).
-8. Push `status=review` with `preq_complete_task` (include `branch_name` and `pr_url` when available).
-9. Run `preq_review_task` to verify and move status to `done`.
-10. Confirm result appears in PREQSTATION work logs.
+1. `preq_get_task` — fetch task details, current status, and acceptance criteria.
+2. `preq_get_project_settings` — resolve deployment strategy.
+3. Based on current task status:
 
-`preq_complete_task` must be used only after the task is moved to `in_progress`.
-`preq_review_task` must be used only after the task is in `review` status (i.e. after `preq_complete_task`).
+   **inbox** — plan only:
+   - `preq_plan_task` with plan markdown and acceptance criteria.
+   - Stop. Do not implement.
+
+   **todo** — full execution:
+   - `preq_start_task`
+   - Implement code changes and run tests.
+   - Execute git flow per deployment strategy contract above.
+   - `preq_complete_task` with summary, branch, pr_url.
+
+   **in_progress** — continue execution:
+   - Continue implementation and run tests.
+   - Execute git flow per deployment strategy contract above.
+   - `preq_complete_task` with summary, branch, pr_url.
+
+   **review** — verification only:
+   - Run verification (tests, build, lint).
+   - `preq_review_task` on success.
+
+4. On any failure: `preq_block_task` with reason.
+
+`preq_complete_task` must be used only after the task is in `in_progress`.
+`preq_review_task` must be used only after the task is in `review` (i.e. after `preq_complete_task`).
 
 ## Project Sync Flow
 
-Use this flow when user triggers "preqstation sync" from OpenClaw:
-
-1. Build project list as `{ projectKey, localPath }` pairs from the caller context (for example OpenClaw `MEMORY.md` mappings).
+1. Build project list as `{ projectKey, localPath }` pairs from the caller context.
 2. Check each `localPath` exists as a directory.
 3. Submit **one batch** sync payload to PREQSTATION with `preq_sync_projects`.
 4. Backend records sync status per project; Projects view shows synced/not-synced state.
@@ -179,154 +155,7 @@ Use this flow when user triggers "preqstation sync" from OpenClaw:
 ## Inbox → Todo Plan Flow
 
 1. User adds short task card to Inbox (optionally specifying `engine`).
-2. Agent loads candidate tasks with `preq_list_tasks` (use `projectKey` + `status=todo` + own `engine` filter).
-3. Agent reads local source code and generates implementation plan with LLM.
+2. Agent loads candidate tasks with `preq_list_tasks` (use `projectKey` + `status=inbox` + own `engine` filter).
+3. Agent reads local source code and generates implementation plan.
 4. Agent calls `preq_plan_task` with `projectKey`, `taskId`, `planMarkdown`, `engine`, and optional `acceptanceCriteria`.
-5. MCP uploads plan to task description and moves the card to `status=todo`.
-
-## Create Task with Engine
-```bash
-curl -s -X POST \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title":"Implement rate limiting",
-    "engine":"claude",
-    "projectKey":"MY_PROJECT"
-  }' \
-  "$PREQSTATION_API_URL/api/tasks" | jq .
-```
-
-## Mark In Progress (with Engine)
-```bash
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"in_progress","engine":"claude"}' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
-
-## Update Status Only (with Engine)
-```bash
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"status":"done","engine":"claude"}' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID/status" | jq .
-```
-
-## Submit In Review Result (with Engine)
-
-Before submitting, verify the feature branch exists on origin:
-```bash
-git ls-remote --heads origin "$BRANCH_NAME"
-# If empty, push failed — do NOT proceed
-```
-
-```bash
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status":"review",
-    "engine":"claude",
-    "branch":"<branch_name>",
-    "result":{
-      "summary":"Implemented rate limiting for login endpoint",
-      "engine":"claude",
-      "branch":"<branch_name>",
-      "pr_url":"https://github.com/org/repo/pull/123",
-      "tests":"npm run test",
-      "completed_at":"2025-02-24T12:00:00Z"
-    }
-  }' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
-
-## Review Task (with Engine)
-
-Runs verification steps (E2E tests, unit tests, build, lint) against the completed work.
-On all checks passing, moves the task status from `review` to `done`.
-On failure, moves the task status to `blocked` with failure details.
-
-```bash
-# MCP mode
-# preq_review_task automatically runs verification and transitions status
-
-# Shell mode
-preq_review_task "$TASK_ID" "claude" "npm run test" "npm run build" "npm run lint"
-
-# Manual curl equivalent
-# 1. Run verification commands locally
-npm run test && npm run build && npm run lint
-
-# 2. On success, move to done
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status":"done",
-    "engine":"claude",
-    "result":{
-      "summary":"All checks passed: tests, build, lint",
-      "engine":"claude",
-      "verified_at":"2025-02-24T12:30:00Z",
-      "checks":{
-        "tests":"pass",
-        "build":"pass",
-        "lint":"pass"
-      }
-    }
-  }' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-
-# 3. On failure, block with details
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status":"blocked",
-    "engine":"claude",
-    "result":{
-      "reason":"Unit tests failed: 3 failures in auth.test.js",
-      "engine":"claude",
-      "blocked_at":"2025-02-24T12:30:00Z",
-      "checks":{
-        "tests":"fail",
-        "build":"pass",
-        "lint":"pass"
-      }
-    }
-  }' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
-
-## Blocked Update (with Engine)
-```bash
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status":"blocked",
-    "engine":"claude",
-    "result":{
-      "reason":"Missing required Redis environment variables",
-      "engine":"claude",
-      "blocked_at":"2025-02-24T12:00:00Z"
-    }
-  }' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
-
-## Plan Task (with Engine)
-```bash
-curl -s -X PATCH \
-  -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "status":"todo",
-    "engine":"claude",
-    "description":"## Plan\n\n1. Add middleware...\n2. Write tests..."
-  }' \
-  "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
-```
+5. Backend uploads plan to task description and moves the card to `status=todo`.
