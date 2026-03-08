@@ -7,6 +7,8 @@ description: >
   Tasks carry an `engine` field (`claude` | `codex` | `gemini`) indicating which AI agent should execute them.
 ---
 
+This is the agent-side lifecycle skill. The OpenClaw launcher skill is separate and should be named `preqstation-dispatch`.
+
 ## Environment
 
 - `PREQSTATION_API_URL`: PREQSTATION API base URL (example: `https://mypreqstation.vercel.app`)
@@ -142,7 +144,7 @@ Rule for `commit_on_review`:
 
 1. `preq_get_task` — fetch task details, current status, and acceptance criteria.
 2. `preq_get_project_settings` — resolve deployment strategy.
-3. Based on current task status:
+3. Read the initial task status once and execute exactly one matching branch below. Do not chain multiple lifecycle branches in a single run.
 
    **inbox** — plan only:
    - `preq_plan_task` with plan markdown and acceptance criteria.
@@ -167,11 +169,13 @@ Rule for `commit_on_review`:
        ```
      - `none`: skip git operations.
    - `preq_complete_task` with summary, branch, pr_url.
+   - Stop after the task reaches `review`. Do not call `preq_review_task` in the same run.
 
    **in_progress** — continue execution:
    - Continue implementation and run tests.
    - **Deploy (same rules as todo above).**
    - `preq_complete_task` with summary, branch, pr_url.
+   - Stop after the task reaches `review`. Do not call `preq_review_task` in the same run.
 
    **review** — verification only:
    - Run verification (tests, build, lint).

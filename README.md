@@ -5,6 +5,8 @@ PREQSTATION agent package with both:
 - Skill instructions for direct REST usage
 - MCP plugin server for Codex/Claude Code
 
+This repository owns the core agent-side skill name `preqstation`. The OpenClaw launcher skill is separate and should use `preqstation-dispatch`.
+
 ## Install Skill (optional)
 
 ```bash
@@ -79,6 +81,7 @@ Engine is always attached by MCP mutation tools (`create/plan/start/update_statu
 5. Fallback: `codex`
 
 `preq_complete_task` requires current status `in_progress`; then it writes `result` and moves task to `review` (In Review). PREQSTATION stores this in work logs for verification.
+After `preq_complete_task`, the current run should stop. `preq_review_task` is for a later run that starts with task status `review`.
 `preq_create_task` omits `status` on create so the server stores it as internal `inbox` (API task view may appear as `todo` due mapping).
 `preq_plan_task` is intended for the Inbox -> Todo planning workflow: user drops short card in Inbox, agent builds plan from local code context, then updates the existing task with that plan and moves it to `todo`.
 
