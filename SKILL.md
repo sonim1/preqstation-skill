@@ -142,47 +142,39 @@ Rule for `commit_on_review`:
 
 ## Execution Flow
 
-1. `preq_get_task` — fetch task details, current status, and acceptance criteria.
-2. `preq_get_project_settings` — resolve deployment strategy.
-3. Read the initial task status once and execute exactly one matching branch below. Do not chain multiple lifecycle branches in a single run.
+1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, and the initial status.
+2. Resolve the initial status once and execute exactly one matching branch below. Do not chain lifecycle branches in a single run.
 
    **inbox** — plan only:
-   - `preq_plan_task` with plan markdown and acceptance criteria.
-   - Stop. Do not implement.
+   - Read local code and prepare the implementation plan.
+   - Call `preq_plan_task` with plan markdown and acceptance criteria.
+   - Stop after backend moves the task to `todo`. Do not implement.
 
-   **todo** — full execution:
-   - `preq_start_task`
-   - Implement code changes and run tests.
-   - **Deploy (REQUIRED before preq_complete_task):**
-     - `direct_commit`: merge worktree into `default_branch` and push:
-       ```
-       git -C <project_cwd> checkout <default_branch>
-       git -C <project_cwd> pull origin <default_branch>
-       git -C <project_cwd> merge --squash <worktree_branch>   # if squash_merge=true
-       git -C <project_cwd> commit -m "<task_id>: <summary>"
-       git -C <project_cwd> push origin <default_branch>
-       ```
-     - `feature_branch`: push worktree branch, optionally create PR:
-       ```
-       git -C <project_cwd> push origin <worktree_branch>
-       # if auto_pr=true: create PR targeting default_branch
-       ```
-     - `none`: skip git operations.
-   - `preq_complete_task` with summary, branch, pr_url.
-   - Stop after the task reaches `review`. Do not call `preq_review_task` in the same run.
+   **todo** — start and execute:
+   - Call `preq_start_task` immediately, before code changes or tests, so the task is marked `in_progress` for the user.
+   - Implement code changes and run task-level tests.
+   - Resolve deploy strategy via the Deployment Strategy Contract.
+   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
+   - Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+   - Stop after backend moves the task to `review`. Do not call `preq_review_task` in the same run.
 
    **in_progress** — continue execution:
-   - Continue implementation and run tests.
-   - **Deploy (same rules as todo above).**
-   - `preq_complete_task` with summary, branch, pr_url.
-   - Stop after the task reaches `review`. Do not call `preq_review_task` in the same run.
+   - Do not call `preq_start_task` again.
+   - Continue implementation and run task-level tests.
+   - Resolve deploy strategy via the Deployment Strategy Contract.
+   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
+   - Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+   - Stop after backend moves the task to `review`. Do not call `preq_review_task` in the same run.
 
    **review** — verification only:
-   - Run verification (tests, build, lint).
-   - `preq_review_task` on success.
+   - Run verification (`tests`, `build`, `lint`).
+   - Call `preq_review_task` on success.
+   - Stop after backend moves the task to `done`.
 
-4. On any failure: `preq_block_task` with reason.
+3. On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
+`preq_plan_task`, `preq_start_task`, `preq_complete_task`, `preq_review_task`, and `preq_block_task` are semantic lifecycle actions. Backend owns the actual status transition and must validate the current status for each action.
+`preq_update_task_status` is an escape hatch for manual operations, not part of the normal lifecycle flow.
 `preq_complete_task` must be used only after the task is in `in_progress`.
 `preq_review_task` must be used only after the task is in `review` (i.e. after `preq_complete_task`).
 
