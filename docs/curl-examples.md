@@ -8,7 +8,7 @@ All requests require: `Authorization: Bearer $PREQSTATION_TOKEN`
 
 ```bash
 curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
-  "$PREQSTATION_API_URL/api/tasks?status=todo&engine=claude" | jq .
+  "$PREQSTATION_API_URL/api/tasks?status=todo&engine=claude-code" | jq .
 ```
 
 ## Fetch Task Detail
@@ -26,7 +26,7 @@ curl -s -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "title":"Implement rate limiting",
-    "engine":"claude",
+    "engine":"claude-code",
     "projectKey":"MY_PROJECT"
   }' \
   "$PREQSTATION_API_URL/api/tasks" | jq .
@@ -40,19 +40,20 @@ curl -s -X PATCH \
   -H "Content-Type: application/json" \
   -d '{
     "status":"todo",
-    "engine":"claude",
-    "description":"## Plan\n\n1. Add middleware...\n2. Write tests..."
+    "engine":"claude-code",
+    "run_state":null,
+    "planMarkdown":"## Plan\n\n1. Add middleware...\n2. Write tests..."
   }' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
 ```
 
-## Mark In Progress
+## Mark Working
 
 ```bash
 curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"status":"in_progress","engine":"claude"}' \
+  -d '{"run_state":"working","engine":"claude-code"}' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
 ```
 
@@ -62,11 +63,11 @@ curl -s -X PATCH \
 curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"status":"done","engine":"claude"}' \
+  -d '{"status":"done","engine":"claude-code"}' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID/status" | jq .
 ```
 
-## Submit In Review Result
+## Submit Ready Result
 
 Before submitting, verify the feature branch exists on origin:
 ```bash
@@ -79,12 +80,13 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"review",
-    "engine":"claude",
+    "status":"ready",
+    "engine":"claude-code",
+    "run_state":null,
     "branch":"<branch_name>",
     "result":{
       "summary":"Implemented rate limiting for login endpoint",
-      "engine":"claude",
+      "engine":"claude-code",
       "branch":"<branch_name>",
       "pr_url":"https://github.com/org/repo/pull/123",
       "tests":"npm run test",
@@ -97,8 +99,8 @@ curl -s -X PATCH \
 ## Review Task
 
 Runs verification steps (E2E tests, unit tests, build, lint) against the completed work.
-On all checks passing, moves the task status from `review` to `done`.
-On failure, moves the task status to `blocked` with failure details.
+On all checks passing, moves the task status from `ready` to `done`.
+On failure, moves the task status to `hold` with failure details.
 
 ```bash
 # On success, move to done
@@ -107,10 +109,11 @@ curl -s -X PATCH \
   -H "Content-Type: application/json" \
   -d '{
     "status":"done",
-    "engine":"claude",
+    "engine":"claude-code",
+    "run_state":null,
     "result":{
       "summary":"All checks passed: tests, build, lint",
-      "engine":"claude",
+      "engine":"claude-code",
       "verified_at":"2025-02-24T12:30:00Z",
       "checks":{
         "tests":"pass",
@@ -126,11 +129,12 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"blocked",
-    "engine":"claude",
+    "status":"hold",
+    "engine":"claude-code",
+    "run_state":null,
     "result":{
       "reason":"Unit tests failed: 3 failures in auth.test.js",
-      "engine":"claude",
+      "engine":"claude-code",
       "blocked_at":"2025-02-24T12:30:00Z",
       "checks":{
         "tests":"fail",
@@ -149,11 +153,12 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"blocked",
-    "engine":"claude",
+    "status":"hold",
+    "engine":"claude-code",
+    "run_state":null,
     "result":{
       "reason":"Missing required Redis environment variables",
-      "engine":"claude",
+      "engine":"claude-code",
       "blocked_at":"2025-02-24T12:00:00Z"
     }
   }' \

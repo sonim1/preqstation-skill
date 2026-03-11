@@ -80,7 +80,7 @@ preq_patch_task() {
 preq_start_task() {
   local task_id="$1"
   local engine="${2:-}"
-  local payload='{"status":"in_progress"'
+  local payload='{"run_state":"working"'
   if [[ -n "$engine" ]]; then
     payload="$payload,\"engine\":\"$engine\""
   fi
@@ -111,10 +111,10 @@ preq_plan_task() {
   local engine="${3:-}"
   local payload
   payload=$(jq -n \
-    --arg desc "$plan_markdown" \
+    --arg plan "$plan_markdown" \
     --arg status "todo" \
     --arg engine "$engine" \
-    '{description: $desc, status: $status} + (if $engine != "" then {engine: $engine} else {} end)'
+    '{planMarkdown: $plan, status: $status, run_state: null} + (if $engine != "" then {engine: $engine} else {} end)'
   )
   preq_patch_task "$task_id" "$payload"
 }
@@ -137,7 +137,8 @@ preq_complete_task() {
     --arg branch "$branch_name" \
     --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{
-      status: "review",
+      status: "ready",
+      run_state: null,
       result: {
         summary: $summary,
         tests: $tests,
@@ -161,7 +162,8 @@ preq_block_task() {
     --arg engine "$engine" \
     --arg blocked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{
-      status: "blocked",
+      status: "hold",
+      run_state: null,
       result: {
         reason: $reason,
         blocked_at: $blocked_at
@@ -216,6 +218,7 @@ preq_review_task() {
       --argjson checks "$checks_json" \
       '{
         status: "done",
+        run_state: null,
         result: {
           summary: "All checks passed",
           verified_at: $verified_at,
@@ -234,7 +237,8 @@ preq_review_task() {
       --arg reason "Verification failed: $failed_checks" \
       --argjson checks "$checks_json" \
       '{
-        status: "blocked",
+        status: "hold",
+        run_state: null,
         result: {
           reason: $reason,
           blocked_at: $blocked_at,

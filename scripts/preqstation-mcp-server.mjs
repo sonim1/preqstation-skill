@@ -42,9 +42,9 @@ try {
   process.exit(1);
 }
 
-const PREQ_TASK_STATUSES = ["inbox", "todo", "in_progress", "review", "done", "blocked"];
-const TASK_STATUS_ONLY_STATUSES = ["inbox", "todo", "in_progress", "in_review", "done", "archived", "review"];
-const PREQ_ENGINES = ["claude", "codex", "gemini"];
+const PREQ_TASK_STATUSES = ["inbox", "todo", "hold", "ready", "done", "archived"];
+const TASK_STATUS_ONLY_STATUSES = ["inbox", "todo", "hold", "ready", "done", "archived"];
+const PREQ_ENGINES = ["claude-code", "codex", "gemini-cli"];
 const PREQ_ENGINE_SET = new Set(PREQ_ENGINES);
 let detectedClientEngine = null;
 
@@ -58,8 +58,8 @@ function inferEngineFromClientInfo(clientInfo) {
   const rawName = typeof clientInfo?.name === "string" ? clientInfo.name : "";
   const name = rawName.trim().toLowerCase();
   if (!name) return null;
-  if (name.includes("claude")) return "claude";
-  if (name.includes("gemini")) return "gemini";
+  if (name.includes("claude")) return "claude-code";
+  if (name.includes("gemini")) return "gemini-cli";
   if (name.includes("codex") || name.includes("openai") || name.includes("chatgpt")) return "codex";
   return null;
 }
@@ -69,7 +69,7 @@ const PREQ_DEFAULT_ENGINE = PREQ_DEFAULT_ENGINE_RAW
   ? normalizeEngineValue(PREQ_DEFAULT_ENGINE_RAW)
   : "codex";
 if (PREQ_DEFAULT_ENGINE_RAW && !PREQ_DEFAULT_ENGINE) {
-  console.error("PREQSTATION_ENGINE must be one of: claude, codex, gemini.");
+  console.error("PREQSTATION_ENGINE must be one of: claude-code, codex, gemini-cli.");
   process.exit(1);
 }
 
@@ -135,6 +135,8 @@ function summarizeTask(task) {
     id: task?.id ?? null,
     title: task?.title ?? null,
     status: task?.status ?? null,
+    run_state: task?.run_state ?? null,
+    run_state_updated_at: task?.run_state_updated_at ?? null,
     priority: task?.priority ?? null,
     repo: task?.repo ?? null,
     engine: task?.engine ?? null,
@@ -185,7 +187,7 @@ server.registerTool(
       status: z.enum(PREQ_TASK_STATUSES).optional(),
       label: z.string().trim().min(1).max(40).optional(),
       projectKey: z.string().trim().min(1).max(20).optional(),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Filter tasks by engine (claude, codex, gemini). Use your own engine value."),
+      engine: z.enum(PREQ_ENGINES).optional().describe("Filter tasks by engine (claude-code, codex, gemini-cli). Use your own engine value."),
       limit: z.number().int().min(1).max(200).optional()
     }
   },
@@ -265,7 +267,7 @@ server.registerTool(
       acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
       priority: z.enum(["highest", "high", "medium", "none", "low", "lowest"]).optional(),
       labels: z.array(z.string().trim().min(1).max(40)).max(20).optional(),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude-code, codex, gemini-cli).")
     }
   },
   async ({ projectKey, taskId, planMarkdown, acceptanceCriteria, priority, labels, engine }) => {
@@ -279,9 +281,10 @@ server.registerTool(
     }
 
     const payload = {
-      description: planMarkdown,
+      planMarkdown,
       status: "todo",
       engine: resolvedEngine,
+      run_state: null,
       ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
       ...(priority ? { priority } : {}),
       ...(labels ? { labels } : {})
@@ -296,6 +299,7 @@ server.registerTool(
       task: result.task || null,
       project_key: normalizedProjectKey,
       requested_status: "todo",
+      requested_run_state: null,
       plan_updated: true
     });
   }
@@ -317,7 +321,7 @@ server.registerTool(
       acceptanceCriteria: z.array(z.string().trim().min(1).max(200)).max(50).optional(),
       branch: z.string().trim().max(200).optional(),
       assignee: z.string().trim().max(120).optional(),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Assign executing engine (claude-code, codex, gemini-cli).")
     }
   },
   async ({ title, repo, description, priority, labels, acceptanceCriteria, branch, assignee, engine }) => {
@@ -351,24 +355,36 @@ server.registerTool(
   "preq_start_task",
   {
     title: "Start PREQSTATION task",
-    description: "Move task to in_progress by ticket number.",
+    description: "Claim task execution and mark run_state=working before any substantive work.",
     inputSchema: {
       taskId: z.string().trim().min(1),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Engine starting this task (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine claiming this task (claude-code, codex, gemini-cli).")
     }
   },
   async ({ taskId, engine }) => {
-    const resolvedEngine = resolveEngine(engine);
+    const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
+    const existingTask = existing.task || existing;
+    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
+    if (currentStatus === "done" || currentStatus === "archived") {
+      throw new Error(
+        `Task ${taskId} is already terminal (${currentStatus}) and cannot be claimed for execution.`
+      );
+    }
+
+    const resolvedEngine = resolveEngine(engine, existingTask?.engine);
     const payload = {
-      status: "in_progress",
-      engine: resolvedEngine
+      engine: resolvedEngine,
+      run_state: "working"
     };
 
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify(payload)
     });
-    return contentText(result);
+    return contentText({
+      task: result.task || null,
+      requested_run_state: "working"
+    });
   }
 );
 
@@ -381,16 +397,15 @@ server.registerTool(
     inputSchema: {
       taskId: z.string().trim().min(1),
       status: z.enum(TASK_STATUS_ONLY_STATUSES),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Engine updating this task status (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine updating this task status (claude-code, codex, gemini-cli).")
     }
   },
   async ({ taskId, status, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
-    const normalizedStatus = status === "review" ? "in_review" : status;
     const payload = {
-      status: normalizedStatus,
+      status,
       ...(resolvedEngine ? { engine: resolvedEngine } : {})
     };
 
@@ -406,9 +421,9 @@ server.registerTool(
 server.registerTool(
   "preq_complete_task",
   {
-    title: "Submit PREQSTATION task for review",
+    title: "Submit PREQSTATION task as ready",
     description:
-      "After work is done in in_progress, upload execution result and move task to review (In Review). Result is saved into PREQSTATION work logs for verification.",
+      "After work is done, upload execution result, move task to ready, and clear run_state. Result is saved into PREQSTATION work logs for verification.",
     inputSchema: {
       taskId: z.string().trim().min(1),
       summary: z.string().trim().min(1).max(4000),
@@ -416,16 +431,16 @@ server.registerTool(
       prUrl: z.string().trim().url().optional(),
       notes: z.string().trim().max(8000).optional(),
       branchName: z.string().trim().max(200).optional(),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Engine that executed this task (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine that executed this task (claude-code, codex, gemini-cli).")
     }
   },
   async ({ taskId, summary, tests, prUrl, notes, branchName, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
-    if (currentStatus !== "in_progress") {
+    if (currentStatus !== "todo" && currentStatus !== "hold") {
       throw new Error(
-        `Task ${taskId} must be in_progress before moving to In Review. Current status: ${currentStatus || "unknown"}.`
+        `Task ${taskId} must be in todo or hold before moving to ready. Current status: ${currentStatus || "unknown"}.`
       );
     }
 
@@ -447,7 +462,8 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: "review",
+        status: "ready",
+        run_state: null,
         result: resultPayload,
         ...(resolvedBranchName ? { branch: resolvedBranchName } : {}),
         ...(resolvedEngine ? { engine: resolvedEngine } : {})
@@ -456,6 +472,8 @@ server.registerTool(
 
     return contentText({
       task: result.task || null,
+      requested_status: "ready",
+      requested_run_state: null,
       uploaded_result: resultPayload
     });
   }
@@ -467,20 +485,20 @@ server.registerTool(
   {
     title: "Review PREQSTATION task",
     description:
-      "Verify completed work and move task from review to done. Run verification (tests, build, lint) before calling this tool. On verification failure, use preq_block_task instead.",
+      "Verify completed work and move task from ready to done. Run verification (tests, build, lint) before calling this tool. On verification failure, use preq_block_task instead.",
     inputSchema: {
       taskId: z.string().trim().min(1),
       summary: z.string().trim().min(1).max(4000).optional(),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Engine running verification (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine running verification (claude-code, codex, gemini-cli).")
     }
   },
   async ({ taskId, summary, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
     const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
-    if (currentStatus !== "in_review" && currentStatus !== "review") {
+    if (currentStatus !== "ready") {
       throw new Error(
-        `Task ${taskId} must be in review before moving to done. Current status: ${currentStatus || "unknown"}.`
+        `Task ${taskId} must be in ready before moving to done. Current status: ${currentStatus || "unknown"}.`
       );
     }
 
@@ -496,6 +514,7 @@ server.registerTool(
       method: "PATCH",
       body: JSON.stringify({
         status: "done",
+        run_state: null,
         result: resultPayload,
         ...(resolvedEngine ? { engine: resolvedEngine } : {})
       })
@@ -531,11 +550,11 @@ server.registerTool(
   "preq_block_task",
   {
     title: "Block PREQSTATION task",
-    description: "Mark task as blocked and upload blocking reason.",
+    description: "Move task to hold, clear run_state, and upload blocking reason.",
     inputSchema: {
       taskId: z.string().trim().min(1),
       reason: z.string().trim().min(1).max(4000),
-      engine: z.enum(PREQ_ENGINES).optional().describe("Engine reporting the block (claude, codex, gemini).")
+      engine: z.enum(PREQ_ENGINES).optional().describe("Engine reporting the block (claude-code, codex, gemini-cli).")
     }
   },
   async ({ taskId, reason, engine }) => {
@@ -549,7 +568,8 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: "blocked",
+        status: "hold",
+        run_state: null,
         result: resultPayload,
         engine: resolvedEngine
       })
