@@ -281,10 +281,9 @@ server.registerTool(
     }
 
     const payload = {
+      lifecycle_action: "plan",
       planMarkdown,
-      status: "todo",
       engine: resolvedEngine,
-      run_state: null,
       ...(acceptanceCriteria ? { acceptance_criteria: acceptanceCriteria } : {}),
       ...(priority ? { priority } : {}),
       ...(labels ? { labels } : {})
@@ -298,8 +297,7 @@ server.registerTool(
     return contentText({
       task: result.task || null,
       project_key: normalizedProjectKey,
-      requested_status: "todo",
-      requested_run_state: null,
+      lifecycle_action: "plan",
       plan_updated: true
     });
   }
@@ -364,17 +362,10 @@ server.registerTool(
   async ({ taskId, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
-    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
-    if (currentStatus === "done" || currentStatus === "archived") {
-      throw new Error(
-        `Task ${taskId} is already terminal (${currentStatus}) and cannot be claimed for execution.`
-      );
-    }
-
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
     const payload = {
       engine: resolvedEngine,
-      run_state: "working"
+      lifecycle_action: "start"
     };
 
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
@@ -383,7 +374,7 @@ server.registerTool(
     });
     return contentText({
       task: result.task || null,
-      requested_run_state: "working"
+      lifecycle_action: "start"
     });
   }
 );
@@ -437,13 +428,6 @@ server.registerTool(
   async ({ taskId, summary, tests, prUrl, notes, branchName, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
-    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
-    if (currentStatus !== "todo" && currentStatus !== "hold") {
-      throw new Error(
-        `Task ${taskId} must be in todo or hold before moving to ready. Current status: ${currentStatus || "unknown"}.`
-      );
-    }
-
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
     const resolvedBranchName =
       (typeof branchName === "string" ? branchName.trim() : "") ||
@@ -462,8 +446,7 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: "ready",
-        run_state: null,
+        lifecycle_action: "complete",
         result: resultPayload,
         ...(resolvedBranchName ? { branch: resolvedBranchName } : {}),
         ...(resolvedEngine ? { engine: resolvedEngine } : {})
@@ -472,8 +455,7 @@ server.registerTool(
 
     return contentText({
       task: result.task || null,
-      requested_status: "ready",
-      requested_run_state: null,
+      lifecycle_action: "complete",
       uploaded_result: resultPayload
     });
   }
@@ -495,13 +477,6 @@ server.registerTool(
   async ({ taskId, summary, engine }) => {
     const existing = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`);
     const existingTask = existing.task || existing;
-    const currentStatus = typeof existingTask?.status === "string" ? existingTask.status.trim() : "";
-    if (currentStatus !== "ready") {
-      throw new Error(
-        `Task ${taskId} must be in ready before moving to done. Current status: ${currentStatus || "unknown"}.`
-      );
-    }
-
     const resolvedEngine = resolveEngine(engine, existingTask?.engine);
 
     const resultPayload = {
@@ -513,8 +488,7 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: "done",
-        run_state: null,
+        lifecycle_action: "review",
         result: resultPayload,
         ...(resolvedEngine ? { engine: resolvedEngine } : {})
       })
@@ -568,8 +542,7 @@ server.registerTool(
     const result = await preqRequest(`/api/tasks/${encodeTaskId(taskId)}`, {
       method: "PATCH",
       body: JSON.stringify({
-        status: "hold",
-        run_state: null,
+        lifecycle_action: "block",
         result: resultPayload,
         engine: resolvedEngine
       })

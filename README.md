@@ -66,13 +66,13 @@ Example MCP server config:
 - `preq_get_task`: fetch single ticket detail by ticket number
 - `preq_get_project_settings`: fetch project settings by key (`/api/projects/:key/settings`)
 - `preq_sync_projects`: verify local project directories and upload one batch sync result to `/api/projects/sync`
-- `preq_plan_task`: improve an existing task with generated plan markdown and move the card to `todo` in a specific project key
+- `preq_plan_task`: improve an existing task with generated plan markdown and send lifecycle action `plan`
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
-- `preq_start_task`: mark `run_state=working` for an active task as soon as an engine claims it
+- `preq_start_task`: send lifecycle action `start` so backend marks `run_state=working` for an active task
 - `preq_update_task_status`: workflow status-only update (`inbox`/`todo`/`hold`/`ready`/`done`/`archived`) via `/api/tasks/:id/status`
-- `preq_complete_task`: from active execution, upload result payload, mark `ready`, and clear `run_state`
-- `preq_review_task`: from `ready`, run verification, mark `done`, and clear `run_state`
-- `preq_block_task`: move task to `hold` with reason and clear `run_state`
+- `preq_complete_task`: from active execution, upload result payload and send lifecycle action `complete`
+- `preq_review_task`: from `ready`, run verification and send lifecycle action `review`
+- `preq_block_task`: send lifecycle action `block` with reason
 - `preq_delete_task`: permanently delete a task by ticket number or UUID
 
 Engine is always attached by MCP mutation tools (`create/plan/start/update_status/complete/review/block`) using this priority:
@@ -83,7 +83,8 @@ Engine is always attached by MCP mutation tools (`create/plan/start/update_statu
 5. Fallback: `codex`
 
 PREQ workflow status is separate from execution state. Canonical workflow statuses are `inbox`, `todo`, `hold`, `ready`, `done`, and `archived`. Canonical `run_state` values are `queued`, `working`, and `null`.
-Telegram/OpenClaw dispatch can set `run_state=queued` before an engine picks the task up. The engine must then call `preq_start_task` immediately after `preq_get_task` so PREQSTATION records `run_state=working` before any substantive work begins.
+Telegram/OpenClaw dispatch can set `run_state=queued` before an engine picks the task up. The engine must then call `preq_start_task` immediately after `preq_get_task` so backend records `run_state=working` before any substantive work begins.
+`preq_start_task`, `preq_plan_task`, `preq_complete_task`, `preq_review_task`, and `preq_block_task` are semantic lifecycle actions. Normal PREQ runs should not send workflow status or `run_state` literals directly; backend owns those transitions.
 `preq_complete_task` writes `result`, moves the task to `ready`, and clears `run_state`. After `preq_complete_task`, the current run should stop. `preq_review_task` is for a later run that starts with task status `ready`.
 `preq_create_task` omits `status` on create so the server stores it as internal `inbox`, and `preq_get_task` now returns that state as `inbox`.
 `preq_plan_task` is intended for the Inbox -> Todo planning workflow: user drops short card in Inbox, agent claims execution (`working`), builds the plan from local code context, then updates the existing task with that plan, moves it to `todo`, and clears `run_state`.

@@ -42,13 +42,13 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_list_tasks`    | Read-only, no engine needed                                       |
 | `preq_get_task`      | Read-only, no engine needed                                       |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key) |
-| `preq_plan_task`     | Assign `engine`, move inbox task to `todo`, and clear `run_state` |
+| `preq_plan_task`     | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state` |
 | `preq_create_task`   | Assign `engine` to new inbox task                                 |
-| `preq_start_task`    | Record `engine` claiming the task and set `run_state=working`     |
+| `preq_start_task`    | Record `engine` claiming the task; backend marks `run_state=working` |
 | `preq_update_task_status` | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`) |
-| `preq_complete_task` | Record `engine` in work log result → `ready`, clear `run_state`   |
-| `preq_review_task`   | Record `engine` running verification → `done`, clear `run_state`  |
-| `preq_block_task`    | Record `engine` reporting the block → `hold`, clear `run_state`   |
+| `preq_complete_task` | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
+| `preq_review_task`   | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state` |
+| `preq_block_task`    | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state` |
 | `preq_delete_task`   | Permanently delete a task by ticket number or UUID                |
 
 This gives deterministic task-id based execution and result upload.
@@ -143,15 +143,16 @@ Rule for `commit_on_review`:
 ## Execution Flow
 
 1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
-2. If the task is active (`inbox`, `todo`, `hold`, or `ready`), call `preq_start_task` immediately after `preq_get_task` and before any planning, implementation, or verification. This claims the task for the current engine and changes `run_state` from `queued` to `working`.
+2. If the task is active (`inbox`, `todo`, `hold`, or `ready`), the first lifecycle mutation must be `preq_start_task`. Call it immediately after `preq_get_task` and before reading more code, planning, implementation, or verification. This claims the task for the current engine and lets backend change `run_state` from `queued` or `null` to `working`.
 3. Resolve the initial workflow status once and execute exactly one matching branch below. Do not chain lifecycle branches in a single run.
 
    **inbox** — plan only:
-   - Read local code and prepare the implementation plan.
+   - Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`.
    - Call `preq_plan_task` with plan markdown and acceptance criteria.
    - Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
 
    **todo** — execute:
+   - Call order: `preq_get_task` → `preq_start_task` → implement/test/deploy → `preq_complete_task`.
    - Implement code changes and run task-level tests.
    - Resolve deploy strategy via the Deployment Strategy Contract.
    - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
@@ -159,6 +160,7 @@ Rule for `commit_on_review`:
    - Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
 
    **hold** — resume from pause/block:
+   - Call order: `preq_get_task` → `preq_start_task` → unblock/implement/test/deploy → `preq_complete_task` or `preq_block_task`.
    - Investigate the blocker, continue implementation, and run task-level tests.
    - Resolve deploy strategy via the Deployment Strategy Contract.
    - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
@@ -167,6 +169,7 @@ Rule for `commit_on_review`:
    - Stop after backend moves the task to `ready` or keeps it in `hold`. Do not call `preq_review_task` in the same run.
 
    **ready** — verification only:
+   - Call order: `preq_get_task` → `preq_start_task` → verify → `preq_review_task`.
    - Run verification (`tests`, `build`, `lint`).
    - Call `preq_review_task` on success.
    - Stop after backend moves the task to `done`.
@@ -176,8 +179,9 @@ Rule for `commit_on_review`:
 `preq_plan_task`, `preq_start_task`, `preq_complete_task`, `preq_review_task`, and `preq_block_task` are semantic lifecycle actions. Backend owns the actual status transition and must validate the current status for each action.
 `preq_update_task_status` is an escape hatch for manual operations, not part of the normal lifecycle flow.
 Workflow status and execution state are separate. Valid workflow statuses are `inbox`, `todo`, `hold`, `ready`, `done`, and `archived`. Valid `run_state` values are `queued`, `working`, and `null`.
-`preq_start_task` is the execution-claim action. It must mark `run_state=working` before any substantive work, but it does not recreate an `in_progress` workflow column.
-`preq_complete_task` must be used only after work is actively claimed and must move the task to `ready`.
+Do not send workflow status or `run_state` literals manually in the normal PREQ lifecycle. Use semantic lifecycle actions and let backend derive `working`, `ready`, `done`, `hold`, and run-state clearing.
+`preq_start_task` is the execution-claim action. It must be the first lifecycle mutation before any substantive work, but it does not recreate an `in_progress` workflow column.
+`preq_complete_task` must be used only after work is actively claimed and backend must move the task to `ready`.
 `preq_review_task` must be used only after the task is in `ready`.
 
 ## Inbox → Todo Plan Flow

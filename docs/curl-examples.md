@@ -39,9 +39,8 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"todo",
+    "lifecycle_action":"plan",
     "engine":"claude-code",
-    "run_state":null,
     "planMarkdown":"## Plan\n\n1. Add middleware...\n2. Write tests..."
   }' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
@@ -53,7 +52,7 @@ curl -s -X PATCH \
 curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"run_state":"working","engine":"claude-code"}' \
+  -d '{"lifecycle_action":"start","engine":"claude-code"}' \
   "$PREQSTATION_API_URL/api/tasks/$TASK_ID" | jq .
 ```
 
@@ -80,9 +79,8 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"ready",
+    "lifecycle_action":"complete",
     "engine":"claude-code",
-    "run_state":null,
     "branch":"<branch_name>",
     "result":{
       "summary":"Implemented rate limiting for login endpoint",
@@ -108,9 +106,8 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"done",
+    "lifecycle_action":"review",
     "engine":"claude-code",
-    "run_state":null,
     "result":{
       "summary":"All checks passed: tests, build, lint",
       "engine":"claude-code",
@@ -129,9 +126,8 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"hold",
+    "lifecycle_action":"block",
     "engine":"claude-code",
-    "run_state":null,
     "result":{
       "reason":"Unit tests failed: 3 failures in auth.test.js",
       "engine":"claude-code",
@@ -153,9 +149,8 @@ curl -s -X PATCH \
   -H "Authorization: Bearer $PREQSTATION_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "status":"hold",
+    "lifecycle_action":"block",
     "engine":"claude-code",
-    "run_state":null,
     "result":{
       "reason":"Missing required Redis environment variables",
       "engine":"claude-code",

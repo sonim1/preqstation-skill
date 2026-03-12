@@ -80,7 +80,7 @@ preq_patch_task() {
 preq_start_task() {
   local task_id="$1"
   local engine="${2:-}"
-  local payload='{"run_state":"working"'
+  local payload='{"lifecycle_action":"start"'
   if [[ -n "$engine" ]]; then
     payload="$payload,\"engine\":\"$engine\""
   fi
@@ -112,9 +112,9 @@ preq_plan_task() {
   local payload
   payload=$(jq -n \
     --arg plan "$plan_markdown" \
-    --arg status "todo" \
+    --arg action "plan" \
     --arg engine "$engine" \
-    '{planMarkdown: $plan, status: $status, run_state: null} + (if $engine != "" then {engine: $engine} else {} end)'
+    '{lifecycle_action: $action, planMarkdown: $plan} + (if $engine != "" then {engine: $engine} else {} end)'
   )
   preq_patch_task "$task_id" "$payload"
 }
@@ -130,6 +130,7 @@ preq_complete_task() {
   local payload
   payload=$(jq -n \
     --arg summary "$summary" \
+    --arg action "complete" \
     --arg engine "$engine" \
     --arg pr_url "$pr_url" \
     --arg tests "$tests" \
@@ -137,8 +138,7 @@ preq_complete_task() {
     --arg branch "$branch_name" \
     --arg completed_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{
-      status: "ready",
-      run_state: null,
+      lifecycle_action: $action,
       result: {
         summary: $summary,
         tests: $tests,
@@ -159,11 +159,11 @@ preq_block_task() {
   local payload
   payload=$(jq -n \
     --arg reason "$reason" \
+    --arg action "block" \
     --arg engine "$engine" \
     --arg blocked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
     '{
-      status: "hold",
-      run_state: null,
+      lifecycle_action: $action,
       result: {
         reason: $reason,
         blocked_at: $blocked_at
@@ -213,12 +213,12 @@ preq_review_task() {
   if [[ "$all_passed" == "true" ]]; then
     local payload
     payload=$(jq -n \
+      --arg action "review" \
       --arg engine "$engine" \
       --arg verified_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       --argjson checks "$checks_json" \
       '{
-        status: "done",
-        run_state: null,
+        lifecycle_action: $action,
         result: {
           summary: "All checks passed",
           verified_at: $verified_at,
@@ -232,13 +232,13 @@ preq_review_task() {
     failed_checks=$(echo "$checks_json" | jq -r 'to_entries | map(select(.value == "fail")) | map(.key) | join(", ")')
     local payload
     payload=$(jq -n \
+      --arg action "block" \
       --arg engine "$engine" \
       --arg blocked_at "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
       --arg reason "Verification failed: $failed_checks" \
       --argjson checks "$checks_json" \
       '{
-        status: "hold",
-        run_state: null,
+        lifecycle_action: $action,
         result: {
           reason: $reason,
           blocked_at: $blocked_at,
