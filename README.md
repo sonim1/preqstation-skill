@@ -65,7 +65,6 @@ Example MCP server config:
 - `preq_list_tasks`: workflow status filter (`inbox`/`todo`/`hold`/`ready`/`done`/`archived`, `projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
 - `preq_get_project_settings`: fetch project settings by key (`/api/projects/:key/settings`)
-- `preq_sync_projects`: verify local project directories and upload one batch sync result to `/api/projects/sync`
 - `preq_plan_task`: improve an existing task with generated plan markdown and send lifecycle action `plan`
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: send lifecycle action `start` so backend marks `run_state=working` for an active task
