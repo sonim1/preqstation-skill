@@ -140,15 +140,24 @@ Rule for `commit_on_review`:
 - if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `ready` until remote push is verified.
 - if `false`, ready transition is allowed without mandatory remote push.
 
+## Caller Intent Guardrail
+
+If the caller, launcher, or prompt explicitly frames the run as `plan`, `implement`, or `review`, treat that as a hard constraint in addition to the fetched PREQ status. Do not silently broaden scope because the task status would allow more work.
+
+- `plan` request: planning only. Allowed work is `preq_get_task` → `preq_start_task` → local code reading → `preq_plan_task` (or `preq_block_task` on failure). Do not implement product changes, do not call `preq_complete_task`, and do not call `preq_review_task`. Planning-only runs are valid for `inbox` and `todo`. If the fetched task status is `hold`, `ready`, `done`, or `archived`, stop and report the mismatch instead of broadening scope.
+- `implement` request: execution only. Normal execution statuses are `todo` and `hold`. If the fetched task status is `inbox`, stop and report that planning must happen first. If the fetched task status is `ready`, stop and report that review must run instead.
+- `review` request: verification only. If the fetched task status is not `ready`, stop and report the mismatch instead of planning or implementing.
+
 ## Execution Flow
 
 1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 2. If the task is active (`inbox`, `todo`, `hold`, or `ready`), the first lifecycle mutation must be `preq_start_task`. Call it immediately after `preq_get_task` and before reading more code, planning, implementation, or verification. This claims the task for the current engine and lets backend change `run_state` from `queued` or `null` to `working`.
-3. Resolve the initial workflow status once and execute exactly one matching branch below. Do not chain lifecycle branches in a single run.
+3. Resolve the initial workflow status once and execute exactly one matching branch below, subject to any stricter caller intent above. Do not chain lifecycle branches in a single run.
 
    **inbox** — plan only:
    - Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`.
    - Call `preq_plan_task` with plan markdown and acceptance criteria.
+   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
    - Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
 
    **todo** — execute:
