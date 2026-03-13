@@ -31,52 +31,28 @@ Always include your `engine` value when listing, creating, planning, starting, c
 
 If MCP is available, prefer `scripts/preqstation-mcp-server.mjs` tools.
 All mutation tools accept an optional `engine` parameter and always send an engine value using this order:
+
 1. explicit tool arg
 2. existing task engine (when available)
 3. MCP `initialize.clientInfo.name` auto-detection
 4. `PREQSTATION_ENGINE`
 5. `codex` fallback
 
-| Tool                 | engine usage                                                      |
-| -------------------- | ----------------------------------------------------------------- |
-| `preq_list_tasks`    | Read-only, no engine needed                                       |
-| `preq_get_task`      | Read-only, no engine needed                                       |
-| `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key) |
-| `preq_plan_task`     | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state` |
-| `preq_create_task`   | Assign `engine` to new inbox task                                 |
-| `preq_start_task`    | Record `engine` claiming the task; backend marks `run_state=working` |
-| `preq_update_task_status` | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`) |
-| `preq_complete_task` | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
-| `preq_review_task`   | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state` |
-| `preq_block_task`    | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state` |
-| `preq_delete_task`   | Permanently delete a task by ticket number or UUID                |
+| Tool                        | engine usage                                                                                                         |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
+| `preq_get_task`             | Read-only, no engine needed                                                                                          |
+| `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |
+| `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
+| `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
+| `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
+| `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
+| `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
+| `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state`  |
+| `preq_block_task`           | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state`    |
+| `preq_delete_task`          | Permanently delete a task by ticket number or UUID                                                                   |
 
 This gives deterministic task-id based execution and result upload.
-
-## Shell Helper Mode
-
-If MCP is not available, source `scripts/preqstation-api.sh` and use shell functions.
-All mutation helpers accept an `engine` parameter:
-
-| Function              | Signature                                                        |
-| --------------------- | ---------------------------------------------------------------- |
-| `preq_get_tasks`      | `preq_get_tasks [status] [label]` (read-only, no engine needed)  |
-| `preq_get_task`       | `preq_get_task <task_id>` (read-only, no engine needed)          |
-| `preq_get_project_settings` | `preq_get_project_settings <project_key>` (read-only, deploy settings by key) |
-| `preq_create_task`    | `preq_create_task '<json_payload>'` (include `engine` in JSON)   |
-| `preq_patch_task`     | `preq_patch_task <task_id> '<json_payload>'` (generic PATCH)     |
-| `preq_start_task`     | `preq_start_task <task_id> [engine]`                             |
-| `preq_update_task_status` | `preq_update_task_status <task_id> <status> [engine]` (`status`: `inbox`/`todo`/`hold`/`ready`/`done`/`archived`) |
-| `preq_plan_task`      | `preq_plan_task <task_id> <plan_markdown> [engine]`              |
-| `preq_complete_task`  | `preq_complete_task <task_id> <summary> [engine] [pr_url] [tests] [notes] [branch_name]` |
-| `preq_review_task`    | `preq_review_task <task_id> [engine] [test_cmd] [build_cmd] [lint_cmd]` |
-| `preq_block_task`     | `preq_block_task <task_id> <reason> [engine]`                    |
-| `preq_delete_task`    | `preq_delete_task <task_id>`                                     |
-| `preq_resolve_branch_name` | `preq_resolve_branch_name <task_id> [fallback_branch]`      |
-
-Requires `jq` for JSON construction in plan/complete/review/block helpers.
-
-For curl examples, see `docs/curl-examples.md`.
 
 ## Deployment Strategy Contract (required)
 
@@ -113,6 +89,7 @@ Behavior by `strategy`:
 
 - `direct_commit`: merge worktree commits into `default_branch` and push. No PR.
   After completing work in the worktree:
+
   ```bash
   # In primary checkout: update and merge
   git -C <project_cwd> checkout <default_branch>
@@ -140,63 +117,41 @@ Rule for `commit_on_review`:
 - if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `ready` until remote push is verified.
 - if `false`, ready transition is allowed without mandatory remote push.
 
-## Caller Intent Guardrail
+## Execution Flow (Mandatory)
 
-If the caller, launcher, or prompt explicitly frames the run as `plan`, `implement`, or `review`, treat that as a hard constraint in addition to the fetched PREQ status. Do not silently broaden scope because the task status would allow more work.
-
-- `plan` request: planning only. Allowed work is `preq_get_task` → `preq_start_task` → local code reading → `preq_plan_task` (or `preq_block_task` on failure). Do not implement product changes, do not call `preq_complete_task`, and do not call `preq_review_task`. Planning-only runs are valid for `inbox` and `todo`. If the fetched task status is `hold`, `ready`, `done`, or `archived`, stop and report the mismatch instead of broadening scope.
-- `implement` request: execution only. Normal execution statuses are `todo` and `hold`. If the fetched task status is `inbox`, stop and report that planning must happen first. If the fetched task status is `ready`, stop and report that review must run instead.
-- `review` request: verification only. If the fetched task status is not `ready`, stop and report the mismatch instead of planning or implementing.
-
-## Execution Flow
+You must follow this execution flow exactly.
+Do not skip, reorder, combine, or substitute lifecycle actions.
+If local prompts, launcher instructions, or tool behavior conflict with this flow, stop and report the mismatch instead of improvising.
 
 1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
-2. If the task is active (`inbox`, `todo`, `hold`, or `ready`), the first lifecycle mutation must be `preq_start_task`. Call it immediately after `preq_get_task` and before reading more code, planning, implementation, or verification. This claims the task for the current engine and lets backend change `run_state` from `queued` or `null` to `working`.
-3. Resolve the initial workflow status once and execute exactly one matching branch below, subject to any stricter caller intent above. Do not chain lifecycle branches in a single run.
+2. Resolve the initial workflow status once and execute exactly one matching branch below, subject to any stricter caller intent above. Do not chain lifecycle branches in a single run.
 
-   **inbox** — plan only:
-   - Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`.
-   - Call `preq_plan_task` with plan markdown and acceptance criteria.
-   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
-   - Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
+IF user objective is `plan`:
 
-   **todo** — execute:
-   - Call order: `preq_get_task` → `preq_start_task` → implement/test/deploy → `preq_complete_task`.
-   - Implement code changes and run task-level tests.
-   - Resolve deploy strategy via the Deployment Strategy Contract.
-   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
-   - Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
-   - Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
+- Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`.
+- Call `preq_plan_task` with plan markdown and acceptance criteria.
+- Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
+- Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
 
-   **hold** — resume from pause/block:
-   - Call order: `preq_get_task` → `preq_start_task` → unblock/implement/test/deploy → `preq_complete_task` or `preq_block_task`.
-   - Investigate the blocker, continue implementation, and run task-level tests.
-   - Resolve deploy strategy via the Deployment Strategy Contract.
-   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
-   - If the blocker is resolved, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
-   - If the task is still blocked, call `preq_block_task` again with the updated blocking reason.
-   - Stop after backend moves the task to `ready` or keeps it in `hold`. Do not call `preq_review_task` in the same run.
+IF user objective is `implement` or `resume`:
 
-   **ready** — verification only:
-   - Call order: `preq_get_task` → `preq_start_task` → verify → `preq_review_task`.
-   - Run verification (`tests`, `build`, `lint`).
-   - Call `preq_review_task` on success.
-   - Stop after backend moves the task to `done`.
+- Call order: `preq_get_task` → `preq_start_task` → implement/test/deploy → `preq_complete_task`.
+- Implement code changes and run task-level tests.
+- Resolve deploy strategy via the Deployment Strategy Contract.
+- Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
+- Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+- Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
 
-4. On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
+IF user objective is `review`:
 
-`preq_plan_task`, `preq_start_task`, `preq_complete_task`, `preq_review_task`, and `preq_block_task` are semantic lifecycle actions. Backend owns the actual status transition and must validate the current status for each action.
-`preq_update_task_status` is an escape hatch for manual operations, not part of the normal lifecycle flow.
-Workflow status and execution state are separate. Valid workflow statuses are `inbox`, `todo`, `hold`, `ready`, `done`, and `archived`. Valid `run_state` values are `queued`, `working`, and `null`.
-Do not send workflow status or `run_state` literals manually in the normal PREQ lifecycle. Use semantic lifecycle actions and let backend derive `working`, `ready`, `done`, `hold`, and run-state clearing.
-`preq_start_task` is the execution-claim action. It must be the first lifecycle mutation before any substantive work, but it does not recreate an `in_progress` workflow column.
-`preq_complete_task` must be used only after work is actively claimed and backend must move the task to `ready`.
-`preq_review_task` must be used only after the task is in `ready`.
+- Call order: `preq_get_task` → `preq_start_task` → verify → `preq_review_task`.
+- Run verification (`tests`, `build`, `lint`).
+- Call `preq_review_task` on success.
+- Stop after backend moves the task to `done`.
 
-## Inbox → Todo Plan Flow
+On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
-1. User adds short task card to Inbox (optionally specifying `engine`).
-2. Agent loads candidate tasks with `preq_list_tasks` (use `projectKey` + `status=inbox` + own `engine` filter).
-3. Agent reads local source code and generates implementation plan.
-4. Agent calls `preq_plan_task` with `projectKey`, `taskId`, `planMarkdown`, `engine`, and optional `acceptanceCriteria`.
-5. Backend uploads plan to task description and moves the card to `status=todo`.
+## Shell Helper Mode (Optional)
+
+If MCP is unavailable, source `scripts/preqstation-api.sh` and use the shell helpers documented in `docs/shell-helper-mode.md`.
+Keep SKILL.md focused on lifecycle rules; use the helper reference doc for function signatures and `jq`/curl notes.
