@@ -59,18 +59,19 @@ This gives deterministic task-id based execution and result upload.
 You must follow this execution flow exactly.
 Do not skip, reorder, combine, or substitute lifecycle actions.
 
-If the caller explicitly requests `debug` mode or asks for progress visibility, maintain `preqstation-progress.md` in the current worktree root during the run.
+Load -> Initialize -> Execute -> Finalize
 
-1. Load the `preqstation-prompt.txt` in this worktree/branch
+1. Load:
+   Load the `.preqstation-prompt.txt` in this worktree/branch
 
-2. Resolve the initial workflow
+2. Initialize:
 
-- Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
-- Call `preq_start_task`
+- MUST Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
+- MUST Call `preq_start_task`
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 
 3. Execute the user objective
-   user objective is in the `preqstation-prompt.txt`
+   user objective is in the `.preqstation-prompt.txt`
 
 - If user objective start with `plan`:
   - Start to plan using the local code.
@@ -86,7 +87,8 @@ If the caller explicitly requests `debug` mode or asks for progress visibility, 
 
 On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
-4. On success, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+4. Finalize:
+   On success, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
 
 ## Deployment Strategy Contract (required)
 
