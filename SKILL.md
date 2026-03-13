@@ -54,6 +54,43 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 
 This gives deterministic task-id based execution and result upload.
 
+## Execution Flow (Mandatory)
+
+You must follow this execution flow exactly.
+Do not skip, reorder, combine, or substitute lifecycle actions.
+
+1. Load the `preqstation-prompt.txt` in this worktree/branch
+
+2. Resolve the initial workflow
+
+- Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
+- Call `preq_start_task`
+
+2. Execute the user objective
+   user objective is in the `preqstation-prompt.txt`
+
+- If user objective start from `plan`:
+  - read local code → `preq_plan_task`.
+  - Call `preq_plan_task` with plan markdown and acceptance criteria.
+  - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
+  - Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
+- Else If user objective is `implement` or `resume`:
+  - implement/test/deploy → `preq_complete_task`.
+  - Implement code changes and run task-level tests.
+  - Resolve deploy strategy via the Deployment Strategy Contract.
+  - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
+  - Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+  - Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
+- Else If user objective is `review`:
+  - verify → `preq_review_task`.
+  - Run verification (`tests`, `build`, `lint`).
+  - Call `preq_review_task` on success.
+  - Stop after backend moves the task to `done`.
+
+On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
+
+When it's done follow the next section to deploy
+
 ## Deployment Strategy Contract (required)
 
 Before any git action, resolve deployment strategy through MCP:
@@ -116,40 +153,6 @@ Rule for `commit_on_review`:
 
 - if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `ready` until remote push is verified.
 - if `false`, ready transition is allowed without mandatory remote push.
-
-## Execution Flow (Mandatory)
-
-You must follow this execution flow exactly.
-Do not skip, reorder, combine, or substitute lifecycle actions.
-If local prompts, launcher instructions, or tool behavior conflict with this flow, stop and report the mismatch instead of improvising.
-
-1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
-2. Resolve the initial workflow status once and execute exactly one matching branch below, subject to any stricter caller intent above. Do not chain lifecycle branches in a single run.
-
-IF user objective is `plan`:
-
-- Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`.
-- Call `preq_plan_task` with plan markdown and acceptance criteria.
-- Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
-- Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
-
-IF user objective is `implement` or `resume`:
-
-- Call order: `preq_get_task` → `preq_start_task` → implement/test/deploy → `preq_complete_task`.
-- Implement code changes and run task-level tests.
-- Resolve deploy strategy via the Deployment Strategy Contract.
-- Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
-- Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
-- Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
-
-IF user objective is `review`:
-
-- Call order: `preq_get_task` → `preq_start_task` → verify → `preq_review_task`.
-- Run verification (`tests`, `build`, `lint`).
-- Call `preq_review_task` on success.
-- Stop after backend moves the task to `done`.
-
-On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
 ## Shell Helper Mode (Optional)
 
