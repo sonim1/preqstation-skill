@@ -66,30 +66,24 @@ Do not skip, reorder, combine, or substitute lifecycle actions.
 - Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 - Call `preq_start_task`
 
-2. Execute the user objective
+3. Execute the user objective
    user objective is in the `preqstation-prompt.txt`
 
-- If user objective start from `plan`:
-  - read local code → `preq_plan_task`.
-  - Call `preq_plan_task` with plan markdown and acceptance criteria.
-  - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, call `preq_complete_task`, or continue into another branch in the same run.
-  - Stop after backend moves the task to `todo` and clears `run_state`. Do not implement.
-- Else If user objective is `implement` or `resume`:
-  - implement/test/deploy → `preq_complete_task`.
+- If user objective start with `plan`:
+  - Start to plan using the local code.
+  - Call `preq_plan_task` with plan markdown and implementation checklist.
+  - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps,
+- Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
   - Resolve deploy strategy via the Deployment Strategy Contract.
-  - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`.
-  - Call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
-  - Stop after backend moves the task to `ready` and clears `run_state`. Do not call `preq_review_task` in the same run.
-- Else If user objective is `review`:
-  - verify → `preq_review_task`.
+  - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`. Follow the `Deployment Strategy Contract` section.
+- Else If user objective start with `review`:
   - Run verification (`tests`, `build`, `lint`).
-  - Call `preq_review_task` on success.
-  - Stop after backend moves the task to `done`.
+  - Call `preq_review_task` with review notes.
 
 On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
-When it's done follow the next section to deploy
+4. On success, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
 
 ## Deployment Strategy Contract (required)
 
