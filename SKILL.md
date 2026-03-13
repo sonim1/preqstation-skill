@@ -59,20 +59,23 @@ This gives deterministic task-id based execution and result upload.
 You must follow this execution flow exactly.
 Do not skip, reorder, combine, or substitute lifecycle actions.
 
+If the caller explicitly requests `debug` mode or asks for progress visibility, maintain `preqstation-progress.md` in the current worktree root during the run.
+
 1. Load the `preqstation-prompt.txt` in this worktree/branch
 
 2. Resolve the initial workflow
 
 - Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 - Call `preq_start_task`
+- In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 
 3. Execute the user objective
    user objective is in the `preqstation-prompt.txt`
 
 - If user objective start with `plan`:
   - Start to plan using the local code.
-  - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps,
+  - Call `preq_plan_task` with plan markdown and implementation checklist.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
   - Resolve deploy strategy via the Deployment Strategy Contract.
@@ -152,3 +155,35 @@ Rule for `commit_on_review`:
 
 If MCP is unavailable, source `scripts/preqstation-api.sh` and use the shell helpers documented in `docs/shell-helper-mode.md`.
 Keep SKILL.md focused on lifecycle rules; use the helper reference doc for function signatures and `jq`/curl notes.
+
+## Debug Progress Mode (Optional)
+
+Use this only when the caller explicitly asks for `debug` mode or requests progress visibility.
+
+- File path: `<worktree>/preqstation-progress.md`
+- Purpose: local human-readable progress artifact for the current run
+- Scope: current run only; refresh it at run start instead of appending infinite history
+- Safety: do not use it as lifecycle source of truth, and do not commit or push it unless the user explicitly asks
+
+Write down the current execution flow steps
+
+For example:
+
+```md
+# PREQ Progress
+
+- Task: PROJ-123
+- Objective: implement
+- Status: todo
+- Run State: working
+- Current Step: running task-level tests
+- Last Updated: 2026-03-13T14:30:00Z
+
+## Timeline
+
+- 2026-03-13T14:10:00Z fetched task details using `preq_get_task`
+- 2026-03-13T14:11:00Z called preq_start_task using `preq_start_task`
+- 2026-03-13T14:18:00Z finished local code inspection
+- 2026-03-13T14:30:00Z running task-level tests
+  ...
+```
