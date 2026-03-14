@@ -58,6 +58,9 @@ This gives deterministic task-id based execution and result upload.
 
 You must follow this execution flow exactly.
 Do not skip, reorder, combine, or substitute lifecycle actions.
+PREQ launcher-driven runs are non-interactive by default.
+You may use process skills such as `brainstorming` or `writing-plans` only as internal guidance while continuing the PREQ lifecycle in the same run.
+Do not stop to ask the user for approval, clarifications, or design feedback mid-run unless PREQ tools are unavailable or the prompt/worktree/task state is invalid.
 
 Load -> Initialize -> Execute -> Finalize
 
@@ -67,6 +70,7 @@ Load -> Initialize -> Execute -> Finalize
 2. Initialize:
 
 - MUST Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
+- If `preq_get_task` returns `latest_preq_result`, read it before substantive work and treat it as previous execution context, especially for resumed or previously blocked tasks.
 - MUST Call `preq_start_task`
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 
@@ -77,13 +81,17 @@ Load -> Initialize -> Execute -> Finalize
   - Start to plan using the local code.
   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps,
   - Call `preq_plan_task` with plan markdown and implementation checklist.
+  - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
+  - If `latest_preq_result` is present, use it to understand the latest blocked reason, prior summary, and most recent PREQ execution context before making changes.
   - Resolve deploy strategy via the Deployment Strategy Contract.
   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`. Follow the `Deployment Strategy Contract` section.
+  - Do not stop for user approval or separate conversational design/spec loops mid-run.
 - Else If user objective start with `review`:
   - Run verification (`tests`, `build`, `lint`).
   - Call `preq_review_task` with review notes.
+  - Do not request additional user approval or switch into a separate conversational workflow mid-run.
 
 On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
 
