@@ -99,7 +99,7 @@ Follow the PREQ lifecycle exactly. Do not skip, reorder, combine, or substitute 
 If user objective is `plan`:
 - Call order: `preq_get_task` → `preq_start_task` → read local code → `preq_plan_task`
 - Call `preq_plan_task` with plan markdown and acceptance criteria
-- Planning means plan generation only. Do not implement, deploy, or continue into another branch in the same run
+- Planning means plan generation only. Do not run tests, build, lint, implement, deploy, or continue into another branch in the same run
 - Stop after backend moves the task to `todo` and clears `run_state`
 
 If user objective is `implement` or `resume`:

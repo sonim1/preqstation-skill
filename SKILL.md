@@ -79,7 +79,7 @@ Load -> Initialize -> Execute -> Finalize
 
 - If user objective start with `plan`:
   - Start to plan using the local code.
-  - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps,
+  - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, or run tests, build, lint, or other verification commands.
   - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
 - Else If user objective start with `implement` or `resume`:
