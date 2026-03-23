@@ -103,20 +103,35 @@ async function preqRequest(path, init = {}) {
   });
 
   const text = await response.text();
-  let payload = null;
-  if (text) {
-    try {
-      payload = JSON.parse(text);
-    } catch {
-      payload = null;
-    }
-  }
+  const trimmed = text.trim();
+  const contentType = response.headers.get("content-type") || "";
 
   if (!response.ok) {
     throw new Error(`PREQSTATION API request failed with status ${response.status}.`);
   }
 
-  return payload || {};
+  if (!trimmed) {
+    return {};
+  }
+
+  const looksLikeJson =
+    contentType.toLowerCase().includes("application/json") ||
+    trimmed.startsWith("{") ||
+    trimmed.startsWith("[");
+
+  if (!looksLikeJson) {
+    throw new Error(
+      `PREQSTATION API returned non-JSON success response for ${path} (status ${response.status}).`
+    );
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    throw new Error(
+      `PREQSTATION API returned invalid JSON for ${path} (status ${response.status}).`
+    );
+  }
 }
 
 function contentText(value) {
