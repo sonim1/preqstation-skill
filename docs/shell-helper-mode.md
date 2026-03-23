@@ -9,6 +9,7 @@ Source `scripts/preqstation-api.sh`, then use these helpers:
 | `preq_get_tasks` | `preq_get_tasks [status] [label]` |
 | `preq_get_task` | `preq_get_task <task_id>` |
 | `preq_get_project_settings` | `preq_get_project_settings <project_key>` |
+| `preq_update_qa_run` | `preq_update_qa_run <run_id> [status] [target_url] [report_markdown] [summary_json]` |
 | `preq_create_task` | `preq_create_task '<json_payload>'` |
 | `preq_patch_task` | `preq_patch_task <task_id> '<json_payload>'` |
 | `preq_start_task` | `preq_start_task <task_id> [engine]` |
@@ -23,4 +24,5 @@ Source `scripts/preqstation-api.sh`, then use these helpers:
 Notes:
 
 - `preq_plan_task`, `preq_complete_task`, `preq_review_task`, and `preq_block_task` require `jq`.
+- `preq_update_qa_run` also requires `jq` for payload construction.
 - For curl payload examples, see `docs/curl-examples.md`.

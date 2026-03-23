@@ -65,6 +65,7 @@ Example MCP server config:
 - `preq_list_tasks`: workflow status filter (`inbox`/`todo`/`hold`/`ready`/`done`/`archived`, `projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
 - `preq_get_project_settings`: fetch project settings by key (`/api/projects/:key/settings`)
+- `preq_update_qa_run`: update branch-level QA status/target/report via `/api/qa-runs/:id`
 - `preq_plan_task`: assign `engine`, send lifecycle action `plan`, promote `inbox -> todo`, and clear `run_state`
 - `preq_create_task`: create a new task in Inbox (internal status) via `/api/tasks`
 - `preq_start_task`: record `engine` claiming the task and send lifecycle action `start` so backend marks `run_state=working`
@@ -93,7 +94,7 @@ Telegram/OpenClaw dispatch can set `run_state=queued` before an engine picks the
 
 Follow the PREQ lifecycle exactly. Do not skip, reorder, combine, or substitute lifecycle actions.
 
-1. Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
+1. When Task ID is present, call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 2. Resolve the initial workflow status once and execute exactly one matching branch below. Do not chain lifecycle branches in a single run.
 
 If user objective is `plan`:
@@ -101,6 +102,12 @@ If user objective is `plan`:
 - Call `preq_plan_task` with plan markdown and acceptance criteria
 - Planning means plan generation only. Do not run tests, build, lint, implement, deploy, or continue into another branch in the same run
 - Stop after backend moves the task to `todo` and clears `run_state`
+
+If user objective is `qa`:
+- Task ID may be absent. Do not invent a task or force task lifecycle transitions for branch-level QA runs.
+- Call order: inspect `.preqstation-prompt.txt` → start local app in current worktree → `preq_update_qa_run(status=running)` → browser QA → `preq_update_qa_run(status=passed|failed)`
+- Upload markdown report, summary counts, and `target_url` to the QA run
+- Stop after the QA run is finalized
 
 If user objective is `implement` or `resume`:
 - Call order: `preq_get_task` → `preq_start_task` → implement/test/deploy → `preq_complete_task`
@@ -113,7 +120,8 @@ If user objective is `review`:
 - Run verification (`tests`, `build`, `lint`)
 - Stop after backend moves the task to `done`
 
-On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
+On any failure in an active task branch, call `preq_block_task` with the blocking reason and stop.
+On any failure in a QA branch, update the QA run to `failed` with a concise markdown report and stop.
 
 Branch handling:
 - Use task `branch` as canonical `branch_name` for git push/PR when present.

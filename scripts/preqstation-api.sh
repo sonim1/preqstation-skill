@@ -46,6 +46,29 @@ preq_get_project_settings() {
   curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" "$PREQSTATION_API_URL/api/projects/$project_key/settings"
 }
 
+preq_update_qa_run() {
+  local run_id="$1"
+  local status="${2:-}"
+  local target_url="${3:-}"
+  local report_markdown="${4:-}"
+  local summary_json="${5:-}"
+  local payload
+  payload=$(jq -n \
+    --arg status "$status" \
+    --arg target_url "$target_url" \
+    --arg report_markdown "$report_markdown" \
+    --argjson summary "${summary_json:-null}" \
+    '(if $status != "" then {status: $status} else {} end)
+      + (if $target_url != "" then {target_url: $target_url} else {} end)
+      + (if $report_markdown != "" then {report_markdown: $report_markdown} else {} end)
+      + (if $summary != null then {summary: $summary} else {} end)')
+  curl -s -X PATCH \
+    -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+    -H "Content-Type: application/json" \
+    -d "$payload" \
+    "$PREQSTATION_API_URL/api/qa-runs/$run_id"
+}
+
 preq_resolve_branch_name() {
   local task_id="$1"
   local fallback="${2:-preq/$task_id}"

@@ -253,6 +253,45 @@ server.registerTool(
   },
 );
 
+// ── preq_update_qa_run ──────────────────────────────────────────────────────
+server.registerTool(
+  "preq_update_qa_run",
+  {
+    title: "Update PREQSTATION QA run",
+    description:
+      "Update a branch-level QA run with running/passed/failed status, target URL, markdown report, and summary counts.",
+    inputSchema: {
+      runId: z.string().trim().min(1),
+      status: z.enum(["running", "passed", "failed"]).optional(),
+      targetUrl: z.string().trim().url().optional(),
+      reportMarkdown: z.string().optional(),
+      summary: z
+        .object({
+          total: z.number().int().min(0),
+          critical: z.number().int().min(0),
+          high: z.number().int().min(0),
+          medium: z.number().int().min(0),
+          low: z.number().int().min(0),
+        })
+        .optional(),
+    },
+  },
+  async ({ runId, status, targetUrl, reportMarkdown, summary }) => {
+    const payload = {};
+    if (status) payload.status = status;
+    if (typeof targetUrl === "string" && targetUrl.trim()) payload.target_url = targetUrl.trim();
+    if (typeof reportMarkdown === "string") payload.report_markdown = reportMarkdown;
+    if (summary) payload.summary = summary;
+
+    const result = await preqRequest(`/api/qa-runs/${encodeTaskId(runId)}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+
+    return contentText(result);
+  },
+);
+
 // ── preq_plan_task ───────────────────────────────────────────────────────────
 server.registerTool(
   "preq_plan_task",

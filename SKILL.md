@@ -43,6 +43,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
 | `preq_get_task`             | Read-only, no engine needed                                                                                          |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |
+| `preq_update_qa_run`        | Read-only from task lifecycle perspective; updates branch-level QA run status/report without task transitions         |
 | `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
 | `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
@@ -69,9 +70,9 @@ Load -> Initialize -> Execute -> Finalize
 
 2. Initialize:
 
-- MUST Call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
+- When Task ID is present, MUST call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 - If `preq_get_task` returns `latest_preq_result`, read it before substantive work and treat it as previous execution context, especially for resumed or previously blocked tasks.
-- MUST Call `preq_start_task`
+- When Task ID is present and the task is active, MUST call `preq_start_task`.
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 
 3. Execute the user objective
@@ -82,6 +83,12 @@ Load -> Initialize -> Execute -> Finalize
   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, or run tests, build, lint, or other verification commands.
   - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
+- Else If user objective start with `qa`:
+  - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
+  - Resolve `qa_run_id` from `.preqstation-prompt.txt` and use `preq_update_qa_run` to mark the run `running` as soon as the local target URL is known.
+  - Start the current project from the current worktree/branch, determine the local target URL, and run browser QA against that URL.
+  - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, and summary counts.
+  - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
   - If `latest_preq_result` is present, use it to understand the latest blocked reason, prior summary, and most recent PREQ execution context before making changes.
@@ -93,10 +100,11 @@ Load -> Initialize -> Execute -> Finalize
   - Call `preq_review_task` with review notes.
   - Do not request additional user approval or switch into a separate conversational workflow mid-run.
 
-On any failure in an active branch, call `preq_block_task` with the blocking reason and stop.
+On any failure in an active task branch, call `preq_block_task` with the blocking reason and stop.
+On any failure in a QA branch, update the QA run to `failed` with a concise markdown report and stop.
 
 4. Finalize:
-   On success, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+   On success for task branches, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
 
 ## Deployment Strategy Contract (required)
 
