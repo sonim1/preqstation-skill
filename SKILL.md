@@ -180,6 +180,8 @@ Keep SKILL.md focused on lifecycle rules; use the helper reference doc for funct
 If you need a local wrapper that renders `.preqstation-prompt.txt`, use `scripts/preqstation-cli.mjs`.
 This is a secondary entrypoint and does not replace MCP.
 Prefer MCP `preq_*` tools whenever they are available.
+Keep the CLI surface intentionally small. The supported objectives are `plan`, `implement`, `review`, and `qa`.
+Do not invent separate CLI wrappers for `preq_get_task`, `preq_list_tasks`, `preq_create_task`, or manual status overrides in this mode unless the repo explicitly adds them later.
 
 Examples:
 
@@ -202,6 +204,7 @@ node scripts/install-integrations.mjs
 ```
 
 The generated Claude commands call the CLI in `--write-prompt-only` mode and then continue with the same PREQ lifecycle in the current workspace.
+Treat them as workflow launchers only, not CRUD wrappers.
 
 ## Debug Progress Mode (Optional)
 

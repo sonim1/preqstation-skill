@@ -198,6 +198,8 @@ codex mcp get preqstation
 
 Use the CLI when you want a local wrapper that renders `.preqstation-prompt.txt` and optionally launches the requested engine.
 MCP is still the preferred lifecycle path whenever it is available.
+The current CLI surface is intentionally small: `plan`, `implement`, `review`, and `qa` only.
+Low-level CRUD operations such as `list`, `get`, `create`, or manual status overrides stay MCP-first for now so task semantics live in one canonical interface.
 
 Examples:
 
@@ -237,3 +239,4 @@ This writes four command files under the `preqstation` namespace in `~/.claude/c
 - `preq-qa`
 
 Each command uses the CLI in `--write-prompt-only` mode, then tells Claude to execute the generated `.preqstation-prompt.txt` in the current workspace while still preferring MCP `preq_*` tools.
+These commands are workflow launchers only. They do not wrap `get`, `list`, `create`, or raw lifecycle mutation APIs.
