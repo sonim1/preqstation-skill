@@ -6,6 +6,7 @@ PREQSTATION agent package with both:
 - MCP plugin server for Codex/Claude Code
 
 This repository owns the core agent-side skill name `preqstation`. The OpenClaw launcher skill is separate and should use `preqstation-dispatch`.
+MCP remains the primary integration. The local CLI and Claude commands below are secondary entrypoints that render the same `.preqstation-prompt.txt` contract.
 
 ## Install Skill (recommended per agent)
 
@@ -192,3 +193,47 @@ Check registration:
 codex mcp list
 codex mcp get preqstation
 ```
+
+## Optional CLI (secondary)
+
+Use the CLI when you want a local wrapper that renders `.preqstation-prompt.txt` and optionally launches the requested engine.
+MCP is still the preferred lifecycle path whenever it is available.
+
+Examples:
+
+```bash
+node scripts/preqstation-cli.mjs plan PROJ-123
+node scripts/preqstation-cli.mjs implement PROJ-123 --engine claude-code
+node scripts/preqstation-cli.mjs review PROJ-123 --write-prompt-only
+node scripts/preqstation-cli.mjs qa PROJ --branch main --run-id qa_123
+```
+
+CLI options:
+
+- `--engine claude-code|codex|gemini-cli` selects the bootstrap launcher (default: `codex`)
+- `--cwd /absolute/path` writes `.preqstation-prompt.txt` into that workspace instead of the current directory
+- `--write-prompt-only` writes the prompt file and exits without launching a nested agent
+
+You can also expose it as a local bin after `npm install`:
+
+```bash
+npx preqstation plan PROJ-123
+```
+
+## Claude Commands (optional)
+
+Command templates live in `integrations/claude/commands/`.
+Install them into `~/.claude/commands/preqstation/` with:
+
+```bash
+node scripts/install-integrations.mjs
+```
+
+This writes four command files under the `preqstation` namespace in `~/.claude/commands/`:
+
+- `preq-plan`
+- `preq-implement`
+- `preq-review`
+- `preq-qa`
+
+Each command uses the CLI in `--write-prompt-only` mode, then tells Claude to execute the generated `.preqstation-prompt.txt` in the current workspace while still preferring MCP `preq_*` tools.

@@ -175,6 +175,34 @@ Rule for `commit_on_review`:
 If MCP is unavailable, source `scripts/preqstation-api.sh` and use the shell helpers documented in `docs/shell-helper-mode.md`.
 Keep SKILL.md focused on lifecycle rules; use the helper reference doc for function signatures and `jq`/curl notes.
 
+## CLI Mode (Secondary, Optional)
+
+If you need a local wrapper that renders `.preqstation-prompt.txt`, use `scripts/preqstation-cli.mjs`.
+This is a secondary entrypoint and does not replace MCP.
+Prefer MCP `preq_*` tools whenever they are available.
+
+Examples:
+
+```bash
+node scripts/preqstation-cli.mjs plan PROJ-123
+node scripts/preqstation-cli.mjs implement PROJ-123 --engine claude-code
+node scripts/preqstation-cli.mjs qa PROJ --branch main --run-id qa_123
+node scripts/preqstation-cli.mjs review PROJ-123 --write-prompt-only
+```
+
+Use `--write-prompt-only` when another agent session, such as a Claude command, should execute the rendered prompt without spawning a nested engine.
+
+## Claude Commands (Optional)
+
+Repo-owned command templates live in `integrations/claude/commands/`.
+Install them into `~/.claude/commands/preqstation/` with:
+
+```bash
+node scripts/install-integrations.mjs
+```
+
+The generated Claude commands call the CLI in `--write-prompt-only` mode and then continue with the same PREQ lifecycle in the current workspace.
+
 ## Debug Progress Mode (Optional)
 
 Use this only when the caller explicitly asks for `debug` mode or requests progress visibility.

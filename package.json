@@ -3,7 +3,12 @@
   "version": "0.1.0",
   "description": "PREQSTATION skill and MCP server for Codex and Claude Code",
   "type": "module",
+  "bin": {
+    "preqstation": "./scripts/preqstation-cli.mjs"
+  },
   "scripts": {
+    "preq:cli": "node scripts/preqstation-cli.mjs",
+    "preq:install-integrations": "node scripts/install-integrations.mjs",
     "preq:mcp": "node scripts/preqstation-mcp-server.mjs"
   },
   "dependencies": {
