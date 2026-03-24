@@ -86,8 +86,10 @@ Load -> Initialize -> Execute -> Finalize
 - Else If user objective start with `qa`:
   - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
   - Resolve `qa_run_id` from `.preqstation-prompt.txt` and use `preq_update_qa_run` to mark the run `running` as soon as the local target URL is known.
+  - Resolve `qa_task_keys` from `.preqstation-prompt.txt` when present. If listed, call `preq_get_task` for each task key before browser testing and treat those tasks' titles, descriptions, and acceptance criteria as the QA scope.
   - If the current agent has access to the `dogfood` skill, use it as the default QA workflow for browser testing and report generation.
   - Start the current project from the current worktree/branch, determine the local target URL, and run browser QA against that URL.
+  - Limit QA to the scoped Ready tasks and the minimal navigation or sanity checks needed to reach and verify them. Do not expand into unrelated full-app exploratory QA. Report unrelated findings only when they block scoped verification or prevent the app from starting.
   - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, and summary counts.
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:

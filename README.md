@@ -105,8 +105,10 @@ If user objective is `plan`:
 
 If user objective is `qa`:
 - Task ID may be absent. Do not invent a task or force task lifecycle transitions for branch-level QA runs.
+- If `.preqstation-prompt.txt` includes `QA Task Keys`, call `preq_get_task` for each listed Ready task first and use those task details as the QA scope.
 - If the current agent has access to the `dogfood` skill, use it as the default QA workflow for browser testing and report generation.
 - Call order: inspect `.preqstation-prompt.txt` → start local app in current worktree → `preq_update_qa_run(status=running)` → browser QA → `preq_update_qa_run(status=passed|failed)`
+- Limit QA to the scoped Ready tasks and the minimal navigation or sanity checks needed to verify them. Do not broaden into unrelated full-app exploratory QA unless an unrelated issue blocks the scoped checks or prevents the app from starting.
 - Upload markdown report, summary counts, and `target_url` to the QA run
 - Stop after the QA run is finalized
 
