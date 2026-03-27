@@ -1,7 +1,7 @@
 {
   "name": "preqstation-skill",
   "version": "0.1.0",
-  "description": "PREQSTATION skill and MCP server for Codex and Claude Code",
+  "description": "PREQSTATION skill package with remote MCP setup guidance and legacy stdio bridge",
   "type": "module",
   "scripts": {
     "preq:mcp": "node scripts/preqstation-mcp-server.mjs"
