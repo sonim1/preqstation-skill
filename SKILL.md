@@ -3,13 +3,22 @@ name: preqstation
 description: >
   Fetch tasks from PREQSTATION, execute work, and push updates/results back to PREQSTATION APIs.
   Use when asked to run a PREQ task, fetch todo tasks, or update execution status.
-  Requires PREQSTATION_API_URL and PREQSTATION_TOKEN environment variables.
+  Prefer the remote MCP endpoint at /mcp with OAuth login. Shell helper mode still uses PREQSTATION_API_URL and PREQSTATION_TOKEN.
   Tasks carry an `engine` field (`claude-code` | `codex` | `gemini-cli`) indicating which AI agent should execute them.
 ---
 
 This is the agent-side lifecycle skill. The OpenClaw launcher skill is separate and should be named `preqstation-dispatch`.
 
 ## Environment
+
+Recommended MCP mode:
+
+- Register the remote MCP endpoint from the PREQSTATION `projects-manager` service:
+  - Claude Code: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
+  - Codex: `codex mcp add preqstation --url https://<your-domain>/mcp`
+- Complete the browser login flow when prompted by the client
+
+Optional shell helper mode:
 
 - `PREQSTATION_API_URL`: PREQSTATION API base URL (example: `https://mypreqstation.vercel.app`)
 - `PREQSTATION_TOKEN`: PREQSTATION Bearer token (generated in PREQSTATION `/api-keys`)
@@ -29,7 +38,7 @@ Always include your `engine` value when listing, creating, planning, starting, c
 
 ## MCP Plugin Mode (Recommended)
 
-If MCP is available, prefer `scripts/preqstation-mcp-server.mjs` tools.
+If MCP is available, prefer the remote `/mcp` endpoint exposed by the PREQSTATION service.
 All mutation tools accept an optional `engine` parameter and always send an engine value using this order:
 
 1. explicit tool arg
@@ -43,7 +52,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
 | `preq_get_task`             | Read-only, no engine needed                                                                                          |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |
-| `preq_update_qa_run`        | Read-only from task lifecycle perspective; updates branch-level QA run status/report without task transitions         |
+| `preq_update_qa_run`        | Read-only from task lifecycle perspective; updates branch-level QA run status/report without task transitions        |
 | `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
 | `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
@@ -176,6 +185,11 @@ Rule for `commit_on_review`:
 
 If MCP is unavailable, source `scripts/preqstation-api.sh` and use the shell helpers documented in `docs/shell-helper-mode.md`.
 Keep SKILL.md focused on lifecycle rules; use the helper reference doc for function signatures and `jq`/curl notes.
+
+## Legacy Local Stdio Bridge (Deprecated)
+
+`scripts/preqstation-mcp-server.mjs` remains only as a temporary compatibility path.
+Do not use it for new installs when the remote `/mcp` endpoint is available.
 
 ## Debug Progress Mode (Optional)
 
