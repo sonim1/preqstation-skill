@@ -41,7 +41,13 @@ claude mcp add --transport http preqstation https://<your-domain>/mcp
 codex mcp add preqstation --url https://<your-domain>/mcp
 ```
 
-When the client first connects, it should open the service login page and complete OAuth automatically.
+### When Authentication Happens
+
+OAuth starts when the client first makes a real request to `/mcp`.
+
+- Codex usually probes the server during `add`, so login may start immediately.
+- Claude Code usually saves the server first and shows `Needs authentication` until it actually connects.
+- In Claude Code, authentication commonly starts on first use, or when you run `claude mcp get preqstation`.
 
 ## Shell Helper Environment Variables (Optional)
 
@@ -57,37 +63,6 @@ Optional (when client name auto-detection is unavailable):
 ```bash
 export PREQSTATION_ENGINE="codex" # claude-code | codex | gemini-cli
 ```
-
-## Legacy Stdio MCP Server (Deprecated)
-
-The local stdio bridge remains in this repository temporarily for compatibility, but new installs should use the remote `/mcp` endpoint above.
-
-Legacy launch command:
-
-```bash
-node /ABSOLUTE/PATH/TO/preqstation-skill/scripts/preqstation-mcp-server.mjs
-```
-
-Legacy config example:
-
-```json
-{
-  "mcpServers": {
-    "preqstation": {
-      "command": "node",
-      "args": [
-        "/ABSOLUTE/PATH/TO/preqstation-skill/scripts/preqstation-mcp-server.mjs"
-      ],
-      "env": {
-        "PREQSTATION_API_URL": "https://your-preqstation-domain.vercel.app",
-        "PREQSTATION_TOKEN": "preq_xxxxxxxxxxxxxxxxx"
-      }
-    }
-  }
-}
-```
-
-This mode still requires `PREQSTATION_API_URL` and `PREQSTATION_TOKEN` because it proxies REST calls directly from the local machine.
 
 ## Exposed MCP Tools
 
@@ -181,4 +156,3 @@ Deployment strategy handling (required before git actions):
 
 - `SKILL.md`: main skill instructions
 - `scripts/preqstation-api.sh`: shell helper wrappers for task APIs
-- `scripts/preqstation-mcp-server.mjs`: deprecated local MCP stdio bridge

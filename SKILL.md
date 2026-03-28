@@ -16,6 +16,9 @@ Recommended MCP mode:
 - Register the remote MCP endpoint from the PREQSTATION `projects-manager` service:
   - Claude Code: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
   - Codex: `codex mcp add preqstation --url https://<your-domain>/mcp`
+- OAuth starts when the client first makes a real request to `/mcp`
+- Codex often triggers login during `add` because it probes the server immediately
+- Claude Code usually stores the config first and may show `Needs authentication` until first use or `claude mcp get preqstation`
 - Complete the browser login flow when prompted by the client
 
 Optional shell helper mode:
@@ -185,11 +188,6 @@ Rule for `commit_on_review`:
 
 If MCP is unavailable, source `scripts/preqstation-api.sh` and use the shell helpers documented in `docs/shell-helper-mode.md`.
 Keep SKILL.md focused on lifecycle rules; use the helper reference doc for function signatures and `jq`/curl notes.
-
-## Legacy Local Stdio Bridge (Deprecated)
-
-`scripts/preqstation-mcp-server.mjs` remains only as a temporary compatibility path.
-Do not use it for new installs when the remote `/mcp` endpoint is available.
 
 ## Debug Progress Mode (Optional)
 

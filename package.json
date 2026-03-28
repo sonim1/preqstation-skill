@@ -1,13 +1,6 @@
 {
   "name": "preqstation-skill",
   "version": "0.1.0",
-  "description": "PREQSTATION skill package with remote MCP setup guidance and legacy stdio bridge",
-  "type": "module",
-  "scripts": {
-    "preq:mcp": "node scripts/preqstation-mcp-server.mjs"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.27.1",
-    "zod": "^4.3.6"
-  }
+  "description": "PREQSTATION skill package with remote MCP setup guidance",
+  "type": "module"
 }
