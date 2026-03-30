@@ -1,6 +1,13 @@
 {
   "name": "preqstation-skill",
   "version": "0.1.0",
-  "description": "PREQSTATION skill package with remote MCP setup guidance",
-  "type": "module"
+  "description": "PREQSTATION local agent package with worker skill docs and a local Claude plugin skeleton",
+  "type": "module",
+  "scripts": {
+    "start:dispatch-channel": "node ./src/dispatch/preq-dispatch-channel-server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.28.0"
+  }
 }

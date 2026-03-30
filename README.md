@@ -1,68 +1,75 @@
 # preqstation-skill
 
-PREQSTATION agent package with:
+PREQSTATION local agent package.
 
-- Skill instructions for task lifecycle execution
-- Remote MCP installation guidance for Codex/Claude Code
-- Optional shell helper for direct REST usage
+Today this repository provides:
 
-This repository owns the core agent-side skill name `preqstation`. The OpenClaw launcher skill is separate and should use `preqstation-dispatch`.
+- the core `preqstation` worker skill
+- remote PREQ `/mcp` setup guidance for Claude Code, Codex, and Gemini CLI
+- an optional shell-helper fallback for direct REST usage
 
-## Install Skill (recommended per agent)
+This is also the planned home for the unified local PREQ client after the OpenClaw dispatcher is absorbed here. Until that migration lands, existing OpenClaw users should keep using their current `preqstation-openclaw` setup.
 
-```bash
-npx skills add sonim1/preqstation-skill -g -a claude-code
-npx skills add sonim1/preqstation-skill -g -a codex
-npx skills add sonim1/preqstation-skill -g -a gemini-cli
-```
+## Choose Your Setup
 
-Install only on the agents that should own the core `preqstation` skill. Avoid bare `-g` installs if you do not want OpenClaw linked through the shared skills store.
+Use the path that matches your environment:
 
-PREQ engine values match the skill install target keys:
+- Claude plugin setup: [docs/install-claude-plugin.md](docs/install-claude-plugin.md)
+- Claude Code worker setup: [docs/install-claude-code.md](docs/install-claude-code.md)
+- Codex or Gemini CLI worker setup: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
+- Experimental dispatch channel setup: [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md)
+- Shell helper fallback: [docs/install-shell-helper.md](docs/install-shell-helper.md)
+- Existing OpenClaw users: [docs/migrate-openclaw.md](docs/migrate-openclaw.md)
 
-- `claude-code`
-- `codex`
-- `gemini-cli`
-
-## Recommended MCP Setup (HTTP + OAuth)
-
-The MCP runtime now lives in the `projects-manager` service at `/mcp`.
-Register the remote endpoint and let Claude Code or Codex handle the browser login flow.
+## Quick Start
 
 ### Claude Code
 
 ```bash
+npx skills add sonim1/preqstation-skill -g -a claude-code
 claude mcp add --transport http preqstation https://<your-domain>/mcp
 ```
 
 ### Codex
 
 ```bash
+npx skills add sonim1/preqstation-skill -g -a codex
 codex mcp add preqstation --url https://<your-domain>/mcp
 ```
 
-### When Authentication Happens
+### Gemini CLI
+
+```bash
+npx skills add sonim1/preqstation-skill -g -a gemini-cli
+```
+
+PREQ engine values match the install target keys:
+
+- `claude-code`
+- `codex`
+- `gemini-cli`
+
+Install only on the agents that should own the core `preqstation` skill. Avoid bare `-g` installs if you do not want legacy OpenClaw-linked behavior through a shared skills store.
+
+## Authentication Notes
 
 OAuth starts when the client first makes a real request to `/mcp`.
 
-- Codex usually probes the server during `add`, so login may start immediately.
-- Claude Code usually saves the server first and shows `Needs authentication` until it actually connects.
-- In Claude Code, authentication commonly starts on first use, or when you run `claude mcp get preqstation`.
+- Codex often starts login during `mcp add` because it probes the server immediately.
+- Claude Code usually stores the server first and may show `Needs authentication` until first use.
+- In Claude Code, authentication commonly starts when the agent first uses PREQ tools or when you run `claude mcp get preqstation`.
 
-## Shell Helper Environment Variables (Optional)
+## Current Repository Scope
 
-If MCP is unavailable and you need direct REST access through `scripts/preqstation-api.sh`, set:
+Use this repository today for:
 
-```bash
-export PREQSTATION_API_URL="https://your-preqstation-domain.vercel.app"
-export PREQSTATION_TOKEN="preq_xxxxxxxxxxxxxxxxx"
-```
+- a local Claude plugin skeleton for `--plugin-dir` testing
+- worker-side task execution through the `preqstation` skill
+- remote PREQ MCP access over HTTP + OAuth
+- an experimental local Claude dispatch channel runtime
+- shell helper fallback when MCP is unavailable
 
-Optional (when client name auto-detection is unavailable):
-
-```bash
-export PREQSTATION_ENGINE="codex" # claude-code | codex | gemini-cli
-```
+The current production OpenClaw dispatcher still lives in `preqstation-openclaw`. This repository now includes an experimental dispatch channel for local development and early migration work, but the full production migration is not complete yet.
 
 ## Exposed MCP Tools
 
@@ -155,4 +162,10 @@ Deployment strategy handling (required before git actions):
 ## Files
 
 - `SKILL.md`: main skill instructions
+- [docs/install-claude-plugin.md](docs/install-claude-plugin.md): local Claude plugin setup
+- [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md): experimental dispatch channel setup
 - `scripts/preqstation-api.sh`: shell helper wrappers for task APIs
+- [docs/install-claude-code.md](docs/install-claude-code.md): Claude Code install path
+- [docs/install-codex-gemini.md](docs/install-codex-gemini.md): Codex and Gemini CLI install paths
+- [docs/install-shell-helper.md](docs/install-shell-helper.md): shell-helper fallback setup
+- [docs/migrate-openclaw.md](docs/migrate-openclaw.md): current OpenClaw migration guidance

@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "preq-dispatch-channel": {
+      "command": "node",
+      "args": ["./src/dispatch/preq-dispatch-channel-server.mjs"],
+      "env": {
+        "PREQSTATION_OAUTH_CALLBACK_PORT": "45451",
+        "PREQ_POLL_INTERVAL_MS": "5000"
+      }
+    }
+  }
+}
