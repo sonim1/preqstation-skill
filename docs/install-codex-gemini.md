@@ -2,6 +2,8 @@
 
 Use this path when Codex or Gemini CLI will execute PREQ tasks as the worker.
 
+This is the normal path for Codex and Gemini. They do not use the local Claude plugin or the Claude dispatch channel described in the other install guides.
+
 ## Codex
 
 ### 1. Install the skill
@@ -51,3 +53,4 @@ PREQ task `engine` values must match the worker:
 - Install the skill only on the runtimes that should own PREQ execution.
 - Prefer MCP mode when available.
 - If remote MCP is not available in your environment, use the shell helper fallback instead.
+- Codex does not need a Claude-style dispatch server here. Keep using the worker + MCP flow unless you are explicitly testing Claude Code dispatch.

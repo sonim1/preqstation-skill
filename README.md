@@ -6,6 +6,7 @@ Today this repository provides:
 
 - the core `preqstation` worker skill
 - remote PREQ `/mcp` setup guidance for Claude Code, Codex, and Gemini CLI
+- a local Claude plugin skeleton plus experimental Claude dispatch channel files
 - an optional shell-helper fallback for direct REST usage
 
 This is also the planned home for the unified local PREQ client after the OpenClaw dispatcher is absorbed here. Until that migration lands, existing OpenClaw users should keep using their current `preqstation-openclaw` setup.
@@ -20,6 +21,15 @@ Use the path that matches your environment:
 - Experimental dispatch channel setup: [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md)
 - Shell helper fallback: [docs/install-shell-helper.md](docs/install-shell-helper.md)
 - Existing OpenClaw users: [docs/migrate-openclaw.md](docs/migrate-openclaw.md)
+
+## Runtime Support
+
+Use this quick rule before installing:
+
+- Claude Code: worker skill + remote PREQ MCP, with optional local plugin and experimental Claude-only dispatch channel
+- Codex: worker skill + remote PREQ MCP only; no Claude-style Channels or Dispatch layer is required here
+- Gemini CLI: worker skill + remote PREQ MCP where supported; no Claude-style Channels or Dispatch layer is involved
+- Telegram/OpenClaw: legacy dispatch ingress that still lives in `preqstation-openclaw`
 
 ## Quick Start
 
@@ -36,6 +46,8 @@ claude mcp add --transport http preqstation https://<your-domain>/mcp
 npx skills add sonim1/preqstation-skill -g -a codex
 codex mcp add preqstation --url https://<your-domain>/mcp
 ```
+
+Codex continues to use the worker path only. It does not need the Claude plugin or the Claude dispatch channel.
 
 ### Gemini CLI
 
@@ -68,6 +80,8 @@ Use this repository today for:
 - remote PREQ MCP access over HTTP + OAuth
 - an experimental local Claude dispatch channel runtime
 - shell helper fallback when MCP is unavailable
+
+The local plugin and dispatch runtime are Claude-specific. Codex and Gemini still use the worker/MCP path and do not have a Claude-style channel or dispatch surface here.
 
 The current production OpenClaw dispatcher still lives in `preqstation-openclaw`. This repository now includes an experimental dispatch channel for local development and early migration work, but the full production migration is not complete yet.
 

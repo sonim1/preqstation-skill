@@ -2,6 +2,8 @@
 
 Use this path when you want to test the local Claude dispatch channel that now lives in this repository.
 
+This path is for Claude Code only. Codex and Gemini CLI do not use this local channel runtime.
+
 This is an experimental migration path. The current production OpenClaw dispatcher still lives in `preqstation-openclaw`.
 
 ## 1. Install dependencies

@@ -2,6 +2,8 @@
 
 Use this path when you want Claude Code to load this repository as a local plugin.
 
+Do not use this path for Codex or Gemini CLI. Their PREQ setup stays on the worker + remote MCP path only.
+
 ## What this gives you today
 
 - plugin metadata through `.claude-plugin/plugin.json`
