@@ -68,6 +68,14 @@ If you want to test the same install surface as `/plugin install`, first follow 
 claude --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
+If you run that command from inside this repository, Claude will also auto-load the local project [`.mcp.json`](/Users/kendrick/projects/preqstation-skill/.mcp.json). That can cause the plugin copy of `preq-dispatch-channel` to be skipped as a duplicate. In that case, either:
+
+```bash
+claude --setting-sources user --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
+```
+
+or run the plugin command from outside this repository.
+
 ## 4. Complete OAuth
 
 The first real PREQ MCP connection will open the normal browser OAuth flow.

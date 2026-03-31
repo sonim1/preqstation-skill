@@ -72,6 +72,12 @@ claude --channels plugin:preqstation@preqstation --dangerously-load-development-
 
 If Claude already has `preqstation` configured via `claude mcp add --transport http preqstation https://<your-domain>/mcp`, the dispatch channel will reuse that URL automatically and the export is optional.
 
+If you launch that command from inside this repository, the local project [`.mcp.json`](/Users/kendrick/projects/preqstation-skill/.mcp.json) can make Claude skip the plugin copy of `preq-dispatch-channel` as a duplicate. For plugin-only testing from this repo, prefer:
+
+```bash
+claude --setting-sources user --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
+```
+
 ## Current limitation
 
 This plugin now includes the experimental Claude dispatch runtime, but it still does not replace every production behavior from `preqstation-openclaw`.
