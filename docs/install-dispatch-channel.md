@@ -29,6 +29,17 @@ Optional:
 ```bash
 export PREQ_POLL_INTERVAL_MS="5000"
 export PREQSTATION_OAUTH_CALLBACK_PORT="45451"
+export PREQSTATION_REPO_ROOTS="$HOME/projects:$HOME/work"
+```
+
+If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or create `~/.preqstation-dispatch/projects.json`:
+
+```json
+{
+  "projects": {
+    "PROJ": "/absolute/path/to/local/repo"
+  }
+}
 ```
 
 ## 3. Start Claude Code with the local channel
@@ -58,6 +69,7 @@ You should be able to:
 - run `claude mcp list` and see `preq-dispatch-channel`
 - see queued-task poll logs in the Claude terminal
 - receive emitted channel events for PREQ tasks where `status=todo` and `run_state=queued`
+- see Claude call the built-in `dispatch_task` tool when those events arrive in a Claude dispatch session
 - when using plugin-install mode, verify `claude plugin list` includes `preqstation@preqstation`
 
 ## Current scope
@@ -68,5 +80,6 @@ This runtime currently does these things:
 - calls `preq_list_tasks` across `claude-code`, `codex`, and `gemini-cli`
 - filters queued todo tasks
 - emits Claude channel events into the current dispatcher session
+- exposes a `dispatch_task` tool so the Claude dispatcher session can create an isolated worktree and launch the requested engine as a child process
 
 It does not yet replace the full production OpenClaw runtime by itself.

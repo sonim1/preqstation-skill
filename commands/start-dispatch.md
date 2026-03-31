@@ -19,4 +19,6 @@ Recommended launch flow:
 5. Start Claude Code with:
    `claude --mcp-config /absolute/path/to/.mcp.json --dangerously-load-development-channels server:preq-dispatch-channel`
 
+Note that this runtime now emits queued PREQ channel events and exposes the `dispatch_task` launcher tool inside the same channel server.
+
 Be explicit that this is still the experimental dispatch runtime in this repository, not the final production migration.

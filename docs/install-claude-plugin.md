@@ -10,7 +10,7 @@ Do not use this path for Codex or Gemini CLI. Their PREQ setup stays on the work
 - the `preqstation` worker skill under `skills/preqstation/SKILL.md`
 - helper commands under `commands/`
 
-This is currently a local plugin skeleton for development and early testing.
+This is currently a local Claude plugin for development, marketplace-style installs, and early dispatch testing.
 
 You have two valid local test modes:
 
@@ -50,7 +50,7 @@ After Claude Code starts with the plugin loaded, you can use:
 
 ## 4. Configure PREQ MCP access
 
-The plugin skeleton does not replace PREQ MCP setup.
+The plugin does not replace PREQ MCP setup.
 You should still register the remote PREQ MCP endpoint:
 
 ```bash
@@ -72,13 +72,13 @@ claude --channels plugin:preqstation@preqstation --dangerously-load-development-
 
 ## Current limitation
 
-This plugin skeleton does not yet include the production Claude dispatch runtime from `preqstation-openclaw`.
+This plugin now includes the experimental Claude dispatch runtime, but it still does not replace every production behavior from `preqstation-openclaw`.
 
 Today it is useful for:
 
 - local plugin development
 - local plugin discovery through `--plugin-dir`
 - packaging the worker-side `preqstation` skill for Claude Code
-- hosting the experimental local dispatch channel files and docs
+- hosting the experimental local dispatch channel runtime, launcher tool, and docs
 
 For the current production OpenClaw dispatcher path, see [docs/migrate-openclaw.md](migrate-openclaw.md).

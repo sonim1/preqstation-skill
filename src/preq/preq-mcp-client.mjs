@@ -18,9 +18,13 @@ function firstTextContent(result) {
   const content = Array.isArray(result?.content) ? result.content : [];
   const firstText = content.find((item) => item?.type === 'text' && typeof item.text === 'string');
   if (!firstText?.text) {
-    throw new Error('preq_list_tasks returned no text content.');
+    throw new Error('PREQ MCP tool returned no text content.');
   }
   return firstText.text;
+}
+
+export function readJsonFromToolResult(result) {
+  return JSON.parse(firstTextContent(result));
 }
 
 export function createOAuthRedirectUrl({
@@ -40,8 +44,13 @@ export function resolvePreqMcpUrl(input) {
 }
 
 export function readTasksFromPreqListTasksResult(result) {
-  const payload = JSON.parse(firstTextContent(result));
+  const payload = readJsonFromToolResult(result);
   return Array.isArray(payload?.tasks) ? payload.tasks : [];
+}
+
+export function readTaskFromPreqGetTaskResult(result) {
+  const payload = readJsonFromToolResult(result);
+  return payload?.task || payload || null;
 }
 
 export async function fetchTodoTasksViaMcp({
@@ -69,6 +78,18 @@ export async function fetchTodoTasksViaMcp({
   }
 
   return Array.from(merged.values());
+}
+
+export async function fetchTaskViaMcp({
+  callTool,
+  taskId,
+}) {
+  const result = await callTool({
+    name: 'preq_get_task',
+    arguments: { taskId },
+  });
+
+  return readTaskFromPreqGetTaskResult(result);
 }
 
 async function connectClientWithOAuth({
@@ -188,6 +209,9 @@ export function createPreqMcpTaskClient({
   return {
     listTodoTasks() {
       return fetchTodoTasksViaMcp({ callTool });
+    },
+    getTask(taskId) {
+      return fetchTaskViaMcp({ callTool, taskId });
     },
     async close() {
       if (!transport) return;

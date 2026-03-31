@@ -1,14 +1,24 @@
 #!/usr/bin/env node
 
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import { z } from 'zod';
 
 import { buildQueuedTaskChannelEvent, selectQueuedTasks } from './channel-helpers.mjs';
 import {
+  DEFAULT_PROJECT_MAP_PATH,
+  DEFAULT_REPO_ROOTS,
+  DEFAULT_WORKTREE_ROOT,
+  dispatchTask as launchDispatchTask,
+} from './dispatch-runtime.mjs';
+import {
   createPreqMcpTaskClient,
   DEFAULT_MCP_CALLBACK_PORT,
+  PREQ_ENGINES,
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
+
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.4';
 
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();
@@ -42,7 +52,8 @@ export function createChannelInstructions() {
     'These events represent PREQ tasks that were queued for dispatch from the web app.',
     'This session acts only as a dispatch runtime.',
     'Do not implement work in this dispatcher session.',
-    'Use the preqstation-dispatch skill or your dispatcher workflow to launch the requested engine in an isolated worktree.',
+    'When a preq_dispatch_channel event arrives, call dispatch_task exactly once using the event metadata.',
+    'The dispatch_task tool prepares the isolated worktree and launches the requested engine.',
     'Treat task_key, project_key, action, engine, and branch_name as the source of truth.',
     'No reply is expected from this one-way channel.',
   ].join(' ');
@@ -98,7 +109,7 @@ export async function emitQueuedTaskEvents({
   for (const task of queuedTasks) {
     const taskKey = task.task_key || task.taskKey || task.id;
     inflightTaskKeys.add(taskKey);
-    await mcp.notification({
+    await mcp.server.notification({
       method: 'notifications/claude/channel',
       params: buildQueuedTaskChannelEvent(task),
     });
@@ -113,9 +124,11 @@ export async function createPreqChannelServer({
   oauthCachePath = process.env.PREQSTATION_OAUTH_CACHE_PATH?.trim() || undefined,
   oauthCallbackPort = readCallbackPort(),
   pollIntervalMs = readPollIntervalMs(),
+  dispatchTaskImpl = launchDispatchTask,
   logger = console,
 } = {}) {
   const inflightTaskKeys = new Set();
+  const launchedTaskKeys = new Set();
   const taskClient =
     preqTaskClient ||
     createPreqMcpTaskClient({
@@ -124,11 +137,71 @@ export async function createPreqChannelServer({
       callbackPort: oauthCallbackPort,
       logger,
     });
-  const mcp = new Server(
-    { name: 'preqstation-dispatch-channel', version: '0.1.0' },
+  const mcp = new McpServer(
+    { name: 'preqstation-dispatch-channel', version: PREQ_CHANNEL_SERVER_VERSION },
     {
       capabilities: { experimental: { 'claude/channel': {} } },
       instructions: createChannelInstructions(),
+    },
+  );
+
+  mcp.registerTool(
+    'dispatch_task',
+    {
+      title: 'Dispatch PREQSTATION task',
+      description:
+        'Prepare an isolated worktree and launch the requested engine for a queued PREQSTATION task.',
+      inputSchema: {
+        task_key: z.string().trim().min(1),
+        project_key: z.string().trim().min(1).optional(),
+        action: z.string().trim().min(1).optional(),
+        engine: z.enum(PREQ_ENGINES).optional(),
+        branch_name: z.string().trim().min(1).optional(),
+      },
+    },
+    async ({ task_key, project_key, action, engine, branch_name }) => {
+      const taskKey = task_key.trim().toUpperCase();
+
+      if (launchedTaskKeys.has(taskKey)) {
+        const message = `Task ${taskKey} was already dispatched in this session.`;
+        logger.error(`[preq-dispatch-channel] ${message}`);
+        return {
+          content: [{ type: 'text', text: message }],
+        };
+      }
+
+      try {
+        const result = await dispatchTaskImpl({
+          taskClient,
+          taskKey,
+          projectKey: project_key,
+          action,
+          engine,
+          branchName: branch_name,
+          mappingPath:
+            process.env.PREQSTATION_PROJECT_MAP_PATH?.trim() || DEFAULT_PROJECT_MAP_PATH,
+          repoRoots: process.env.PREQSTATION_REPO_ROOTS?.trim() || DEFAULT_REPO_ROOTS,
+          worktreeRoot:
+            process.env.PREQSTATION_WORKTREE_ROOT?.trim() || DEFAULT_WORKTREE_ROOT,
+        });
+
+        launchedTaskKeys.add(taskKey);
+        logger.error(
+          `[preq-dispatch-channel] launched ${result.engine} for ${result.task_key} in ${result.worktree_path} (pid ${result.pid})`,
+        );
+
+        return {
+          content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (error) {
+        inflightTaskKeys.delete(taskKey);
+        const message = error instanceof Error ? error.message : String(error ?? 'Dispatch failed.');
+        logger.error(`[preq-dispatch-channel] dispatch failed for ${taskKey}: ${message}`);
+        return {
+          isError: true,
+          content: [{ type: 'text', text: message }],
+        };
+      }
     },
   );
 
@@ -181,7 +254,7 @@ export async function createPreqChannelServer({
     pollOnce: runPoll,
     async close() {
       clearInterval(interval);
-      await taskClient.close?.();
+      await Promise.allSettled([mcp.close(), taskClient.close?.()]);
     },
   };
 }

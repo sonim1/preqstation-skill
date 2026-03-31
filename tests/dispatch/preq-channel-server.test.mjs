@@ -12,7 +12,8 @@ test('createChannelInstructions describes the dispatch runtime in generic terms'
   const instructions = createChannelInstructions();
 
   assert.match(instructions, /dispatch runtime/i);
-  assert.match(instructions, /preqstation-dispatch/i);
+  assert.match(instructions, /dispatch_task/i);
+  assert.match(instructions, /exactly once/i);
   assert.doesNotMatch(instructions, /OpenClaw/i);
 });
 

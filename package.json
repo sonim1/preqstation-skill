@@ -1,6 +1,6 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "PREQSTATION local agent package with worker skill docs and a local Claude plugin skeleton",
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "test": "node --test"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.28.0"
+    "@modelcontextprotocol/sdk": "^1.28.0",
+    "zod": "^4.3.6"
   }
 }

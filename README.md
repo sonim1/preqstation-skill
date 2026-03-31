@@ -6,7 +6,7 @@ Today this repository provides:
 
 - the core `preqstation` worker skill
 - remote PREQ `/mcp` setup guidance for Claude Code, Codex, and Gemini CLI
-- a local Claude plugin skeleton plus experimental Claude dispatch channel files
+- a local Claude plugin plus an experimental Claude dispatch channel runtime
 - an optional shell-helper fallback for direct REST usage
 
 This is also the planned home for the unified local PREQ client after the OpenClaw dispatcher is absorbed here. Until that migration lands, existing OpenClaw users should keep using their current `preqstation-openclaw` setup.
@@ -84,11 +84,11 @@ OAuth starts when the client first makes a real request to `/mcp`.
 
 Use this repository today for:
 
-- a local Claude plugin skeleton for `--plugin-dir` testing
+- a local Claude plugin for `--plugin-dir` or marketplace installs
 - a Claude plugin package that can be installed directly from the GitHub repo through Claude plugin marketplaces
 - worker-side task execution through the `preqstation` skill
 - remote PREQ MCP access over HTTP + OAuth
-- an experimental local Claude dispatch channel runtime
+- an experimental local Claude dispatch channel runtime with a built-in `dispatch_task` launcher tool
 - shell helper fallback when MCP is unavailable
 
 The local plugin and dispatch runtime are Claude-specific. Codex and Gemini still use the worker/MCP path and do not have a Claude-style channel or dispatch surface here.

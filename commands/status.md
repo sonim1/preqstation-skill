@@ -11,7 +11,7 @@ Current repository responsibilities:
 - worker-side PREQ skill instructions
 - remote PREQ `/mcp` setup guidance
 - shell helper fallback
-- local Claude plugin skeleton for `--plugin-dir` testing
+- local Claude plugin for `--plugin-dir` or marketplace installs
 - experimental local Claude dispatch channel runtime
 
 Still planned, not fully migrated here yet:

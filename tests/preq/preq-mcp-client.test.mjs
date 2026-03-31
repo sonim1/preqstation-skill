@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  fetchTaskViaMcp,
   fetchTodoTasksViaMcp,
+  readTaskFromPreqGetTaskResult,
   readTasksFromPreqListTasksResult,
 } from '../../src/preq/preq-mcp-client.mjs';
 
@@ -76,4 +78,61 @@ test('fetchTodoTasksViaMcp queries every PREQ engine and merges duplicate tasks'
     { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
     { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
   ]);
+});
+
+test('readTaskFromPreqGetTaskResult unwraps detailed task payloads', () => {
+  const result = {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          task: {
+            task_key: 'PROJ-9',
+            repo: 'https://github.com/acme/example',
+            branch: 'task/proj-9/fix-auth',
+          },
+        }),
+      },
+    ],
+  };
+
+  assert.deepEqual(readTaskFromPreqGetTaskResult(result), {
+    task_key: 'PROJ-9',
+    repo: 'https://github.com/acme/example',
+    branch: 'task/proj-9/fix-auth',
+  });
+});
+
+test('fetchTaskViaMcp queries preq_get_task and returns the task payload', async () => {
+  const calls = [];
+  const task = await fetchTaskViaMcp({
+    taskId: 'PROJ-11',
+    callTool: async ({ name, arguments: args }) => {
+      calls.push({ name, args });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              task: {
+                task_key: 'PROJ-11',
+                repo: 'https://github.com/acme/repo',
+              },
+            }),
+          },
+        ],
+      };
+    },
+  });
+
+  assert.deepEqual(calls, [
+    {
+      name: 'preq_get_task',
+      args: { taskId: 'PROJ-11' },
+    },
+  ]);
+  assert.deepEqual(task, {
+    task_key: 'PROJ-11',
+    repo: 'https://github.com/acme/repo',
+  });
 });
