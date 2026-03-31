@@ -1,0 +1,13 @@
+{
+  "name": "preqstation",
+  "owner": {
+    "name": "PREQSTATION"
+  },
+  "plugins": [
+    {
+      "name": "preqstation",
+      "source": "./",
+      "description": "PREQSTATION worker skill and Claude dispatch plugin for PREQ task execution."
+    }
+  ]
+}

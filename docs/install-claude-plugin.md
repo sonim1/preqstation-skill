@@ -14,48 +14,30 @@ This is currently a local plugin skeleton for development and early testing.
 
 You have two valid local test modes:
 
+- preferred install path: GitHub marketplace source + `claude plugin install preqstation`
 - fastest development loop: `claude --plugin-dir /path/to/preqstation-skill`
-- official install UX smoke test: local marketplace + `claude plugin install preqstation@preqstation-local`
 
-## 1. Fastest local test: load the plugin from the repository
+## 1. Preferred install path: install from the GitHub repository
+
+```bash
+claude plugin marketplace add https://github.com/sonim1/preqstation-skill
+claude plugin install preqstation
+claude plugin list
+```
+
+If you need to be explicit about the marketplace name, use:
+
+```bash
+claude plugin install preqstation@preqstation
+```
+
+## 2. Development path: load the plugin from the repository
+
+Use this while iterating on local changes before you push them:
 
 ```bash
 cd /path/to/preqstation-skill
 claude --plugin-dir /path/to/preqstation-skill
-```
-
-## 2. Official install UX test: install from a local marketplace
-
-Create a local marketplace that points at this repository:
-
-```bash
-mkdir -p /tmp/preqstation-local-marketplace/.claude-plugin
-mkdir -p /tmp/preqstation-local-marketplace/plugins
-ln -sfn /path/to/preqstation-skill /tmp/preqstation-local-marketplace/plugins/preqstation
-cat > /tmp/preqstation-local-marketplace/.claude-plugin/marketplace.json <<'EOF'
-{
-  "name": "preqstation-local",
-  "owner": {
-    "name": "PREQSTATION"
-  },
-  "plugins": [
-    {
-      "name": "preqstation",
-      "source": "./plugins/preqstation",
-      "description": "PREQSTATION worker skill and Claude dispatch plugin"
-    }
-  ]
-}
-EOF
-```
-
-Validate and install:
-
-```bash
-claude plugin validate /tmp/preqstation-local-marketplace
-claude plugin marketplace add /tmp/preqstation-local-marketplace
-claude plugin install preqstation@preqstation-local
-claude plugin list
 ```
 
 ## 3. Use plugin-provided commands
@@ -85,7 +67,7 @@ When testing a locally installed marketplace plugin, use:
 
 ```bash
 export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
-claude --channels plugin:preqstation@preqstation-local --dangerously-load-development-channels plugin:preqstation@preqstation-local
+claude --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
 ## Current limitation

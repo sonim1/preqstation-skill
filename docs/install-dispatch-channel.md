@@ -8,8 +8,8 @@ This is an experimental migration path. The current production OpenClaw dispatch
 
 You can run this channel in two ways:
 
+- plugin-install mode with `claude plugin marketplace add https://github.com/sonim1/preqstation-skill` then `claude plugin install preqstation`
 - development mode from the repo with `--mcp-config`
-- plugin-install mode with `claude plugin install preqstation@preqstation-local`
 
 ## 1. Install dependencies
 
@@ -41,10 +41,10 @@ claude --mcp-config /path/to/preqstation-skill/.mcp.json --dangerously-load-deve
 
 ### Option B: installed plugin mode
 
-If you want to test the same install surface as `/plugin install`, first follow [install-claude-plugin.md](install-claude-plugin.md) to install `preqstation@preqstation-local`, then start Claude with:
+If you want to test the same install surface as `/plugin install`, first follow [install-claude-plugin.md](install-claude-plugin.md) to install `preqstation`, then start Claude with:
 
 ```bash
-claude --channels plugin:preqstation@preqstation-local --dangerously-load-development-channels plugin:preqstation@preqstation-local
+claude --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
 ## 4. Complete OAuth
@@ -58,7 +58,7 @@ You should be able to:
 - run `claude mcp list` and see `preq-dispatch-channel`
 - see queued-task poll logs in the Claude terminal
 - receive emitted channel events for PREQ tasks where `status=todo` and `run_state=queued`
-- when using plugin-install mode, verify `claude plugin list` includes `preqstation@preqstation-local`
+- when using plugin-install mode, verify `claude plugin list` includes `preqstation@preqstation`
 
 ## Current scope
 

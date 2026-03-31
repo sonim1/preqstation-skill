@@ -35,10 +35,10 @@ Use this quick rule before installing:
 
 Use one of these two Claude-only paths:
 
+- no local clone install path: `claude plugin marketplace add https://github.com/sonim1/preqstation-skill` then `claude plugin install preqstation`
 - fastest local development loop: `claude --plugin-dir /path/to/preqstation-skill`
-- official install UX smoke test: create a local plugin marketplace, then run `claude plugin install preqstation@preqstation-local`
 
-The second path is the right one when you want to test the same install surface described in the Claude plugin marketplace docs.
+The first path is the closest match to the official marketplace install UX. The second path is best while developing the plugin itself.
 
 ## Quick Start
 
@@ -85,7 +85,7 @@ OAuth starts when the client first makes a real request to `/mcp`.
 Use this repository today for:
 
 - a local Claude plugin skeleton for `--plugin-dir` testing
-- a Claude plugin package that can be smoke-tested through a local marketplace + `claude plugin install`
+- a Claude plugin package that can be installed directly from the GitHub repo through Claude plugin marketplaces
 - worker-side task execution through the `preqstation` skill
 - remote PREQ MCP access over HTTP + OAuth
 - an experimental local Claude dispatch channel runtime
