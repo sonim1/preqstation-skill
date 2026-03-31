@@ -220,6 +220,7 @@ export function createPreqMcpTaskClient({
   }
 
   return {
+    mcpUrl: resolvedMcpUrl,
     listTodoTasks() {
       return fetchTodoTasksViaMcp({ callTool });
     },

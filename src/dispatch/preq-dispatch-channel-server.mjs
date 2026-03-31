@@ -22,7 +22,7 @@ import {
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
 
-const PREQ_CHANNEL_SERVER_VERSION = '0.1.8';
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.9';
 const DEFAULT_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 
 function readPollIntervalMs() {
@@ -227,7 +227,7 @@ export async function createPreqChannelServer({
   const mcp = new McpServer(
     { name: 'preqstation-dispatch-channel', version: PREQ_CHANNEL_SERVER_VERSION },
     {
-      capabilities: { experimental: { 'claude/channel': {} } },
+      capabilities: { tools: {}, experimental: { 'claude/channel': {} } },
       instructions: createChannelInstructions(),
     },
   );
@@ -265,6 +265,7 @@ export async function createPreqChannelServer({
           action,
           engine,
           branchName: branch_name,
+          mcpUrl,
           mappingPath:
             process.env.PREQSTATION_PROJECT_MAP_PATH?.trim() || DEFAULT_PROJECT_MAP_PATH,
           repoRoots: process.env.PREQSTATION_REPO_ROOTS?.trim() || DEFAULT_REPO_ROOTS,

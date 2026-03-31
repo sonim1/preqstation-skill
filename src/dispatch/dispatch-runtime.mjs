@@ -344,7 +344,30 @@ export function renderDispatchPrompt({
   ].join('\n');
 }
 
-export function buildEngineLaunchSpec(engine) {
+export async function writeClaudeChildMcpConfig({
+  worktreePath,
+  mcpUrl,
+}) {
+  const mcpConfigPath = path.join(worktreePath, '.preqstation-mcp.json');
+  await writeFile(
+    mcpConfigPath,
+    JSON.stringify(
+      {
+        mcpServers: {
+          preqstation: {
+            type: 'http',
+            url: mcpUrl,
+          },
+        },
+      },
+      null,
+      2,
+    ),
+  );
+  return mcpConfigPath;
+}
+
+export function buildEngineLaunchSpec(engine, options = {}) {
   const bootstrapPrompt = [
     'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace.',
     'Treat that file as the source of truth.',
@@ -352,12 +375,22 @@ export function buildEngineLaunchSpec(engine) {
   ].join(' ');
 
   switch (normalizeString(engine).toLowerCase()) {
-    case 'claude-code':
+    case 'claude-code': {
+      const mcpConfigPath = normalizeString(options.mcpConfigPath);
+      const args = [
+        '--setting-sources',
+        'project,local',
+      ];
+      if (mcpConfigPath) {
+        args.push('--mcp-config', mcpConfigPath);
+      }
+      args.push('--dangerously-skip-permissions', '-p', bootstrapPrompt);
       return {
         command: 'claude',
-        args: ['--dangerously-skip-permissions', '-p', bootstrapPrompt],
+        args,
         env: {},
       };
+    }
     case 'codex':
       return {
         command: 'codex',
@@ -379,12 +412,17 @@ export async function launchDispatchProcess({
   engine,
   worktreePath,
   promptText,
+  mcpUrl,
 }) {
   const promptPath = path.join(worktreePath, '.preqstation-prompt.txt');
   await writeFile(promptPath, promptText);
 
   const logPath = path.join(worktreePath, `.preqstation-dispatch-${Date.now()}.log`);
-  const { command, args, env } = buildEngineLaunchSpec(engine);
+  const mcpConfigPath =
+    normalizeString(engine).toLowerCase() === 'claude-code' && normalizeString(mcpUrl)
+      ? await writeClaudeChildMcpConfig({ worktreePath, mcpUrl })
+      : null;
+  const { command, args, env } = buildEngineLaunchSpec(engine, { mcpConfigPath });
   await ensureCommandAvailable(command);
 
   const stdoutFd = openSync(logPath, 'a');
@@ -401,6 +439,7 @@ export async function launchDispatchProcess({
     pid: child.pid,
     logPath,
     promptPath,
+    mcpConfigPath,
   };
 }
 
@@ -411,6 +450,7 @@ export async function dispatchTask({
   action,
   engine,
   branchName,
+  mcpUrl,
   mappingPath = DEFAULT_PROJECT_MAP_PATH,
   repoRoots = DEFAULT_REPO_ROOTS,
   worktreeRoot = DEFAULT_WORKTREE_ROOT,
@@ -452,6 +492,7 @@ export async function dispatchTask({
     engine: resolvedEngine,
     worktreePath,
     promptText,
+    mcpUrl: normalizeString(mcpUrl || taskClient?.mcpUrl),
   });
 
   return {
@@ -466,5 +507,6 @@ export async function dispatchTask({
     pid: launch.pid,
     prompt_path: launch.promptPath,
     log_path: launch.logPath,
+    mcp_config_path: launch.mcpConfigPath,
   };
 }

@@ -1,5 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, readFile } from 'node:fs/promises';
+import path from 'node:path';
+import os from 'node:os';
 
 import {
   buildEngineLaunchSpec,
@@ -7,6 +10,7 @@ import {
   normalizeRepoUrl,
   parseWorktreeList,
   slugifyBranchName,
+  writeClaudeChildMcpConfig,
 } from '../../src/dispatch/dispatch-runtime.mjs';
 
 test('normalizeRepoUrl normalizes GitHub SSH and HTTPS remotes', () => {
@@ -59,9 +63,13 @@ test('parseWorktreeList extracts worktree paths and branch refs', () => {
 });
 
 test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
-  assert.deepEqual(buildEngineLaunchSpec('claude-code'), {
+  assert.deepEqual(buildEngineLaunchSpec('claude-code', { mcpConfigPath: '/tmp/preqstation-mcp.json' }), {
     command: 'claude',
     args: [
+      '--setting-sources',
+      'project,local',
+      '--mcp-config',
+      '/tmp/preqstation-mcp.json',
       '--dangerously-skip-permissions',
       '-p',
       'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately.',
@@ -77,5 +85,25 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
       'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately.',
     ],
     env: {},
+  });
+});
+
+test('writeClaudeChildMcpConfig writes a project-local PREQ MCP config', async () => {
+  const worktreePath = await mkdtemp(path.join(os.tmpdir(), 'preqstation-dispatch-test-'));
+  const mcpConfigPath = await writeClaudeChildMcpConfig({
+    worktreePath,
+    mcpUrl: 'https://pm.example.com/mcp',
+  });
+
+  assert.equal(mcpConfigPath, path.join(worktreePath, '.preqstation-mcp.json'));
+
+  const raw = await readFile(mcpConfigPath, 'utf8');
+  assert.deepEqual(JSON.parse(raw), {
+    mcpServers: {
+      preqstation: {
+        type: 'http',
+        url: 'https://pm.example.com/mcp',
+      },
+    },
   });
 });
