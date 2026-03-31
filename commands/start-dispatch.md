@@ -17,7 +17,7 @@ Recommended launch flow:
 3. Explain that `mcp-dev.json` defines `preq-dispatch-channel` for direct bare-server testing.
 4. Tell them to export `PREQSTATION_MCP_URL=https://<your-domain>/mcp`.
 5. Start Claude Code with:
-   `claude --mcp-config /absolute/path/to/mcp-dev.json --dangerously-load-development-channels server:preq-dispatch-channel`
+   `claude --mcp-config /absolute/path/to/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel`
 
 Note that this runtime now emits queued PREQ channel events and exposes the `dispatch_task` launcher tool inside the same channel server.
 
