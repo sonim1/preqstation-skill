@@ -93,6 +93,7 @@ export async function createPreqChannelServer({
   );
 
   await mcp.connect(new StdioServerTransport());
+  logger.error(`[preq-dispatch-channel] connected to ${mcpUrl}`);
 
   const pollOnce = async () => {
     const tasks = await taskClient.listTodoTasks();
@@ -112,6 +113,18 @@ export async function createPreqChannelServer({
   }, pollIntervalMs);
 
   interval.unref?.();
+
+  pollOnce()
+    .then((count) => {
+      if (count === 0) {
+        logger.error('[preq-dispatch-channel] watching for queued Claude Code dispatch tasks');
+      }
+    })
+    .catch((error) => {
+      logger.error(
+        `[preq-dispatch-channel] ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
 
   return {
     mcp,
