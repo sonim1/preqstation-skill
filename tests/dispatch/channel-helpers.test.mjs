@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   buildQueuedTaskChannelEvent,
   selectQueuedTasks,
+  summarizeQueuedTaskSelection,
 } from '../../src/dispatch/channel-helpers.mjs';
 
 test('selectQueuedTasks returns todo tasks with queued run_state that are not inflight', () => {
@@ -60,4 +61,36 @@ test('buildQueuedTaskChannelEvent creates dispatch content and normalized metada
     branch_name: 'task/proj-123/fix-auth',
     source: 'preq_dispatch_channel',
   });
+});
+
+test('summarizeQueuedTaskSelection explains why tasks were skipped', () => {
+  const summary = summarizeQueuedTaskSelection(
+    [
+      {
+        task_key: 'PROJ-1',
+        status: 'todo',
+        run_state: 'queued',
+        dispatch_target: 'claude-code-channel',
+      },
+      {
+        task_key: 'PROJ-2',
+        status: 'todo',
+        run_state: 'working',
+        dispatch_target: 'claude-code-channel',
+      },
+      {
+        task_key: 'PROJ-3',
+        status: 'todo',
+        run_state: 'queued',
+        dispatch_target: 'telegram',
+      },
+    ],
+    new Set(['PROJ-1']),
+  );
+
+  assert.deepEqual(summary, [
+    { taskKey: 'PROJ-1', eligible: false, reason: 'already-inflight' },
+    { taskKey: 'PROJ-2', eligible: false, reason: 'run_state=working' },
+    { taskKey: 'PROJ-3', eligible: false, reason: 'dispatch_target=telegram' },
+  ]);
 });

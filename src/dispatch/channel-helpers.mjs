@@ -22,22 +22,44 @@ function deriveProjectKey(taskKey) {
   return projectKey;
 }
 
+function describeQueueEligibility(task, inflightTaskKeys = new Set()) {
+  const taskKey = normalizeString(task?.task_key || task?.taskKey || task?.id);
+  if (!taskKey) {
+    return { taskKey: null, eligible: false, reason: 'missing-task-key' };
+  }
+
+  if (inflightTaskKeys.has(taskKey)) {
+    return { taskKey, eligible: false, reason: 'already-inflight' };
+  }
+
+  const status = normalizeString(task?.status).toLowerCase();
+  if (status !== 'todo') {
+    return { taskKey, eligible: false, reason: `status=${status || 'missing'}` };
+  }
+
+  const runState = normalizeString(task?.run_state || task?.runState).toLowerCase();
+  if (runState !== 'queued') {
+    return { taskKey, eligible: false, reason: `run_state=${runState || 'missing'}` };
+  }
+
+  const dispatchTarget = normalizeDispatchTarget(task?.dispatch_target || task?.dispatchTarget);
+  if (dispatchTarget !== 'claude-code-channel') {
+    return {
+      taskKey,
+      eligible: false,
+      reason: `dispatch_target=${dispatchTarget || 'missing'}`,
+    };
+  }
+
+  return { taskKey, eligible: true, reason: 'eligible' };
+}
+
 export function selectQueuedTasks(tasks, inflightTaskKeys = new Set()) {
-  return tasks.filter((task) => {
-    const taskKey = normalizeString(task?.task_key || task?.taskKey || task?.id);
-    if (!taskKey) return false;
-    if (inflightTaskKeys.has(taskKey)) return false;
+  return tasks.filter((task) => describeQueueEligibility(task, inflightTaskKeys).eligible);
+}
 
-    const status = normalizeString(task?.status).toLowerCase();
-    const runState = normalizeString(task?.run_state || task?.runState).toLowerCase();
-    const dispatchTarget = normalizeDispatchTarget(task?.dispatch_target || task?.dispatchTarget);
-
-    return (
-      status === 'todo' &&
-      runState === 'queued' &&
-      dispatchTarget === 'claude-code-channel'
-    );
-  });
+export function summarizeQueuedTaskSelection(tasks, inflightTaskKeys = new Set()) {
+  return tasks.map((task) => describeQueueEligibility(task, inflightTaskKeys));
 }
 
 export function buildQueuedTaskChannelEvent(task) {

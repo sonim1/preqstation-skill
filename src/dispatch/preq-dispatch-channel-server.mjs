@@ -8,7 +8,11 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 
-import { buildQueuedTaskChannelEvent, selectQueuedTasks } from './channel-helpers.mjs';
+import {
+  buildQueuedTaskChannelEvent,
+  selectQueuedTasks,
+  summarizeQueuedTaskSelection,
+} from './channel-helpers.mjs';
 import {
   DEFAULT_PROJECT_MAP_PATH,
   DEFAULT_REPO_ROOTS,
@@ -22,7 +26,7 @@ import {
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
 
-const PREQ_CHANNEL_SERVER_VERSION = '0.1.9';
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.10';
 const DEFAULT_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 
 function readPollIntervalMs() {
@@ -35,6 +39,10 @@ function readCallbackPort() {
   const raw = process.env.PREQSTATION_OAUTH_CALLBACK_PORT?.trim();
   const value = raw ? Number.parseInt(raw, 10) : DEFAULT_MCP_CALLBACK_PORT;
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_MCP_CALLBACK_PORT;
+}
+
+function shouldDebugQueueSelection() {
+  return normalizeString(process.env.PREQSTATION_DEBUG_QUEUE).toLowerCase() === '1';
 }
 
 function normalizeString(value) {
@@ -314,6 +322,14 @@ export async function createPreqChannelServer({
 
   const pollOnce = async () => {
     const tasks = await taskClient.listTodoTasks();
+    if (shouldDebugQueueSelection()) {
+      const summary = summarizeQueuedTaskSelection(tasks, inflightTaskKeys)
+        .map(({ taskKey, reason }) => `${taskKey || 'unknown'}:${reason}`)
+        .join(', ');
+      logger.error(
+        `[preq-dispatch-channel] polled ${tasks.length} task(s); queue selection => ${summary || 'none'}`,
+      );
+    }
     const count = await emitQueuedTaskEvents({ mcp, tasks, inflightTaskKeys });
     if (count > 0) {
       logger.error(`[preq-dispatch-channel] emitted ${count} queued task event(s)`);
