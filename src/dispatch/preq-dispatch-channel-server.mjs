@@ -65,6 +65,29 @@ export function describeDispatchChannelError(error, oauthCallbackPort) {
   return error instanceof Error ? error.message : String(error ?? '');
 }
 
+export function createSerializedPollRunner(pollOnce, onError) {
+  let activePoll = null;
+
+  return function runPoll() {
+    if (activePoll) {
+      return activePoll;
+    }
+
+    activePoll = (async () => {
+      try {
+        return await pollOnce();
+      } catch (error) {
+        onError(error);
+        throw error;
+      } finally {
+        activePoll = null;
+      }
+    })();
+
+    return activePoll;
+  };
+}
+
 export async function emitQueuedTaskEvents({
   mcp,
   tasks,
@@ -137,23 +160,25 @@ export async function createPreqChannelServer({
     return count;
   };
 
+  const runPoll = createSerializedPollRunner(pollOnce, handlePollError);
+
   const interval = setInterval(() => {
-    pollOnce().catch(handlePollError);
+    runPoll().catch(() => {});
   }, pollIntervalMs);
 
   interval.unref?.();
 
-  pollOnce()
+  runPoll()
     .then((count) => {
       if (count === 0) {
         logger.error('[preq-dispatch-channel] watching for queued Claude Code dispatch tasks');
       }
     })
-    .catch(handlePollError);
+    .catch(() => {});
 
   return {
     mcp,
-    pollOnce,
+    pollOnce: runPoll,
     async close() {
       clearInterval(interval);
       await taskClient.close?.();

@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  createSerializedPollRunner,
   createChannelInstructions,
   describeDispatchChannelError,
   isCallbackPortInUseError,
@@ -32,4 +33,34 @@ test('describeDispatchChannelError explains callback port conflicts clearly', ()
   assert.match(message, /45451/);
   assert.match(message, /another PREQ dispatch session/i);
   assert.match(message, /PREQSTATION_OAUTH_CALLBACK_PORT/);
+});
+
+test('createSerializedPollRunner prevents overlapping polls', async () => {
+  let resolvePoll;
+  let calls = 0;
+  const active = [];
+
+  const runPoll = createSerializedPollRunner(
+    async () => {
+      calls += 1;
+      active.push(calls);
+      await new Promise((resolve) => {
+        resolvePoll = resolve;
+      });
+      return calls;
+    },
+    () => {},
+  );
+
+  const first = runPoll();
+  const second = runPoll();
+
+  assert.equal(calls, 1);
+  assert.equal(first, second);
+
+  resolvePoll();
+  const result = await first;
+
+  assert.equal(result, 1);
+  assert.deepEqual(active, [1]);
 });
