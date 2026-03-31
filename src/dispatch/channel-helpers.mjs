@@ -46,13 +46,29 @@ export function buildQueuedTaskChannelEvent(task) {
   const engine = normalizeString(task?.engine).toLowerCase() || 'claude-code';
   const branchName = normalizeString(task?.branch_name || task?.branchName);
   const projectKey = deriveProjectKey(taskKey);
+  const action = STATUS_ACTION_MAP[status] || 'implement';
+
+  const instructions = [
+    `Dispatch queued PREQ task ${taskKey}.`,
+    'Call dispatch_task exactly once with these arguments:',
+    `task_key="${taskKey}"`,
+    `project_key="${projectKey}"`,
+    `action="${action}"`,
+    `engine="${engine}"`,
+  ];
+
+  if (branchName) {
+    instructions.push(`branch_name="${branchName}"`);
+  }
+
+  instructions.push('Do not implement the task in this dispatcher session.');
 
   return {
-    content: `Dispatch queued PREQ task ${taskKey}.`,
+    content: instructions.join(' '),
     meta: {
       task_key: taskKey,
       project_key: projectKey,
-      action: STATUS_ACTION_MAP[status] || 'implement',
+      action,
       engine,
       branch_name: branchName,
       source: 'preq_dispatch_channel',

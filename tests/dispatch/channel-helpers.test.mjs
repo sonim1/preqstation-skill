@@ -46,7 +46,12 @@ test('buildQueuedTaskChannelEvent creates dispatch content and normalized metada
     branch_name: 'task/proj-123/fix-auth',
   });
 
-  assert.equal(event.content, 'Dispatch queued PREQ task PROJ-123.');
+  assert.match(event.content, /Dispatch queued PREQ task PROJ-123\./);
+  assert.match(event.content, /Call dispatch_task exactly once/i);
+  assert.match(event.content, /task_key="PROJ-123"/);
+  assert.match(event.content, /project_key="PROJ"/);
+  assert.match(event.content, /engine="codex"/);
+  assert.match(event.content, /branch_name="task\/proj-123\/fix-auth"/);
   assert.deepEqual(event.meta, {
     task_key: 'PROJ-123',
     project_key: 'PROJ',
