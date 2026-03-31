@@ -6,6 +6,7 @@ import { waitForOAuthAuthorizationCode } from './preq-oauth-callback-server.mjs'
 import { DEFAULT_OAUTH_CACHE_PATH, FileOAuthClientProvider } from './preq-oauth-provider.mjs';
 
 export const PREQ_ENGINES = ['claude-code', 'codex', 'gemini-cli'];
+export const PREQ_DISPATCHABLE_STATUSES = ['inbox', 'todo'];
 export const DEFAULT_MCP_CALLBACK_HOST = '127.0.0.1';
 export const DEFAULT_MCP_CALLBACK_PORT = 45451;
 export const DEFAULT_MCP_CALLBACK_PATH = '/callback';
@@ -56,24 +57,27 @@ export function readTaskFromPreqGetTaskResult(result) {
 export async function fetchTodoTasksViaMcp({
   callTool,
   engines = PREQ_ENGINES,
+  statuses = PREQ_DISPATCHABLE_STATUSES,
   limit = 200,
 }) {
   const merged = new Map();
 
   for (const engine of engines) {
-    const result = await callTool({
-      name: 'preq_list_tasks',
-      arguments: {
-        status: 'todo',
-        engine,
-        limit,
-      },
-    });
+    for (const status of statuses) {
+      const result = await callTool({
+        name: 'preq_list_tasks',
+        arguments: {
+          status,
+          engine,
+          limit,
+        },
+      });
 
-    for (const task of readTasksFromPreqListTasksResult(result)) {
-      const identity = taskIdentity(task);
-      if (!identity || merged.has(identity)) continue;
-      merged.set(identity, task);
+      for (const task of readTasksFromPreqListTasksResult(result)) {
+        const identity = taskIdentity(task);
+        if (!identity || merged.has(identity)) continue;
+        merged.set(identity, task);
+      }
     }
   }
 

@@ -33,7 +33,7 @@ function describeQueueEligibility(task, inflightTaskKeys = new Set()) {
   }
 
   const status = normalizeString(task?.status).toLowerCase();
-  if (status !== 'todo') {
+  if (!DISPATCHABLE_STATUSES.has(status)) {
     return { taskKey, eligible: false, reason: `status=${status || 'missing'}` };
   }
 
@@ -97,3 +97,4 @@ export function buildQueuedTaskChannelEvent(task) {
     },
   };
 }
+const DISPATCHABLE_STATUSES = new Set(['inbox', 'todo']);

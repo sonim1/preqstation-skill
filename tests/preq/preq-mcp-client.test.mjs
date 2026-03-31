@@ -26,21 +26,25 @@ test('readTasksFromPreqListTasksResult parses JSON text content from preq_list_t
   ]);
 });
 
-test('fetchTodoTasksViaMcp queries every PREQ engine and merges duplicate tasks', async () => {
+test('fetchTodoTasksViaMcp queries inbox and todo tasks for every PREQ engine and merges duplicates', async () => {
   const calls = [];
   const tasks = await fetchTodoTasksViaMcp({
     callTool: async ({ name, arguments: args }) => {
       calls.push({ name, args });
 
-      const byEngine = {
-        'claude-code': [
-          { task_key: 'PROJ-1', status: 'todo', run_state: 'queued', engine: 'claude-code' },
+      const byEngineAndStatus = {
+        'claude-code:inbox': [
+          { task_key: 'PROJ-1', status: 'inbox', run_state: 'queued', engine: 'claude-code' },
         ],
-        codex: [
+        'claude-code:todo': [],
+        'codex:inbox': [],
+        'codex:todo': [
           { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
         ],
-        'gemini-cli': [
+        'gemini-cli:inbox': [
           { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
+        ],
+        'gemini-cli:todo': [
           { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
         ],
       };
@@ -50,7 +54,7 @@ test('fetchTodoTasksViaMcp queries every PREQ engine and merges duplicate tasks'
           {
             type: 'text',
             text: JSON.stringify({
-              tasks: byEngine[args.engine] || [],
+              tasks: byEngineAndStatus[`${args.engine}:${args.status}`] || [],
             }),
           },
         ],
@@ -61,11 +65,23 @@ test('fetchTodoTasksViaMcp queries every PREQ engine and merges duplicate tasks'
   assert.deepEqual(calls, [
     {
       name: 'preq_list_tasks',
+      args: { status: 'inbox', engine: 'claude-code', limit: 200 },
+    },
+    {
+      name: 'preq_list_tasks',
       args: { status: 'todo', engine: 'claude-code', limit: 200 },
     },
     {
       name: 'preq_list_tasks',
+      args: { status: 'inbox', engine: 'codex', limit: 200 },
+    },
+    {
+      name: 'preq_list_tasks',
       args: { status: 'todo', engine: 'codex', limit: 200 },
+    },
+    {
+      name: 'preq_list_tasks',
+      args: { status: 'inbox', engine: 'gemini-cli', limit: 200 },
     },
     {
       name: 'preq_list_tasks',
@@ -74,7 +90,7 @@ test('fetchTodoTasksViaMcp queries every PREQ engine and merges duplicate tasks'
   ]);
 
   assert.deepEqual(tasks, [
-    { task_key: 'PROJ-1', status: 'todo', run_state: 'queued', engine: 'claude-code' },
+    { task_key: 'PROJ-1', status: 'inbox', run_state: 'queued', engine: 'claude-code' },
     { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
     { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
   ]);
