@@ -1,14 +1,14 @@
 {
   "name": "preqstation",
   "description": "PREQSTATION worker skill and Claude dispatch plugin for PREQ task execution",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "author": {
     "name": "PREQSTATION"
   },
   "repository": "https://github.com/sonim1/preqstation-skill",
   "homepage": "https://github.com/sonim1/preqstation-skill",
   "skills": "./skills/",
-  "mcpServers": "./.mcp.json",
+  "mcpServers": "./.claude-plugin/mcp.json",
   "keywords": [
     "preqstation",
     "claude-code",

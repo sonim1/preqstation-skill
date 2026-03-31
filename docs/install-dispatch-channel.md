@@ -57,7 +57,7 @@ If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or
 ### Option A: direct repo development mode
 
 ```bash
-claude --mcp-config /path/to/preqstation-skill/.mcp.json --dangerously-load-development-channels server:preq-dispatch-channel
+claude --mcp-config /path/to/preqstation-skill/mcp-dev.json --dangerously-load-development-channels server:preq-dispatch-channel
 ```
 
 ### Option B: installed plugin mode
@@ -68,13 +68,7 @@ If you want to test the same install surface as `/plugin install`, first follow 
 claude --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
-If you run that command from inside this repository, Claude will also auto-load the local project [`.mcp.json`](/Users/kendrick/projects/preqstation-skill/.mcp.json). That can cause the plugin copy of `preq-dispatch-channel` to be skipped as a duplicate. In that case, either:
-
-```bash
-claude --setting-sources user --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
-```
-
-or run the plugin command from outside this repository.
+The plugin now uses its own bundled MCP config, so this command should work from the repo root without colliding with direct bare-server testing.
 
 ## 4. Complete OAuth
 
