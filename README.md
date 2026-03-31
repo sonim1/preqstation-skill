@@ -79,6 +79,7 @@ OAuth starts when the client first makes a real request to `/mcp`.
 - Codex often starts login during `mcp add` because it probes the server immediately.
 - Claude Code usually stores the server first and may show `Needs authentication` until first use.
 - In Claude Code, authentication commonly starts when the agent first uses PREQ tools or when you run `claude mcp get preqstation`.
+- The local dispatch channel now reuses the Claude `preqstation` MCP URL from `~/.claude.json` when available, so `PREQSTATION_MCP_URL` is only needed as an override.
 
 ## Current Repository Scope
 

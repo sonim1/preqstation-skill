@@ -6,6 +6,7 @@ import {
   createChannelInstructions,
   describeDispatchChannelError,
   isCallbackPortInUseError,
+  readClaudeConfiguredPreqMcpUrl,
 } from '../../src/dispatch/preq-dispatch-channel-server.mjs';
 
 test('createChannelInstructions describes the dispatch runtime in generic terms', () => {
@@ -64,4 +65,24 @@ test('createSerializedPollRunner prevents overlapping polls', async () => {
 
   assert.equal(result, 1);
   assert.deepEqual(active, [1]);
+});
+
+test('readClaudeConfiguredPreqMcpUrl prefers the nearest Claude project MCP server config', () => {
+  const configPath = new URL('../fixtures/claude-config.json', import.meta.url);
+  const configuredUrl = readClaudeConfiguredPreqMcpUrl({
+    cwd: '/Users/example/projects/app/packages/web',
+    configPath,
+  });
+
+  assert.equal(configuredUrl, 'https://pm.example.com/mcp');
+});
+
+test('readClaudeConfiguredPreqMcpUrl falls back to a single discovered project URL', () => {
+  const configPath = new URL('../fixtures/claude-config-single-project.json', import.meta.url);
+  const configuredUrl = readClaudeConfiguredPreqMcpUrl({
+    cwd: '/Users/example/other-repo',
+    configPath,
+  });
+
+  assert.equal(configuredUrl, 'https://pm.single.example.com/mcp');
 });

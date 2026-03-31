@@ -18,7 +18,17 @@ cd /path/to/preqstation-skill
 npm install
 ```
 
-## 2. Set the PREQ MCP URL
+## 2. Configure the PREQ MCP URL
+
+Preferred path:
+
+```bash
+claude mcp add --transport http preqstation https://<your-domain>/mcp
+```
+
+The dispatch channel will reuse that Claude MCP URL automatically.
+
+Optional override:
 
 ```bash
 export PREQSTATION_MCP_URL="https://<your-domain>/mcp"

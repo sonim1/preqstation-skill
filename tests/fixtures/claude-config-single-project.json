@@ -1,0 +1,12 @@
+{
+  "projects": {
+    "/Users/example/projects/app": {
+      "mcpServers": {
+        "preqstation": {
+          "type": "http",
+          "url": "https://pm.single.example.com/mcp"
+        }
+      }
+    }
+  }
+}

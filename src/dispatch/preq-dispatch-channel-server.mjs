@@ -1,5 +1,9 @@
 #!/usr/bin/env node
 
+import { readFileSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
@@ -18,7 +22,8 @@ import {
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
 
-const PREQ_CHANNEL_SERVER_VERSION = '0.1.4';
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.6';
+const DEFAULT_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();
@@ -32,18 +37,100 @@ function readCallbackPort() {
   return Number.isFinite(value) && value > 0 ? value : DEFAULT_MCP_CALLBACK_PORT;
 }
 
+function normalizeString(value) {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function readConfiguredHttpUrl(serverConfig) {
+  if (!serverConfig || typeof serverConfig !== 'object') {
+    return '';
+  }
+
+  if (serverConfig.type === 'http' && typeof serverConfig.url === 'string') {
+    return normalizeString(serverConfig.url);
+  }
+
+  if (typeof serverConfig.url === 'string') {
+    return normalizeString(serverConfig.url);
+  }
+
+  return '';
+}
+
+function parentPaths(startPath) {
+  const resolved = path.resolve(startPath);
+  const paths = [];
+  let current = resolved;
+
+  while (true) {
+    paths.push(current);
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return paths;
+    }
+    current = parent;
+  }
+}
+
+export function readClaudeConfiguredPreqMcpUrl({
+  cwd = process.cwd(),
+  configPath = DEFAULT_CLAUDE_CONFIG_PATH,
+  serverName = 'preqstation',
+} = {}) {
+  try {
+    const raw = readFileSync(configPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const projectConfigs =
+      parsed?.projects && typeof parsed.projects === 'object' ? parsed.projects : {};
+
+    for (const candidatePath of parentPaths(cwd)) {
+      const projectConfig = projectConfigs[candidatePath];
+      const projectUrl = readConfiguredHttpUrl(projectConfig?.mcpServers?.[serverName]);
+      if (projectUrl) {
+        return projectUrl;
+      }
+    }
+
+    const rootUrl = readConfiguredHttpUrl(parsed?.mcpServers?.[serverName]);
+    if (rootUrl) {
+      return rootUrl;
+    }
+
+    const discoveredUrls = new Set();
+    for (const projectConfig of Object.values(projectConfigs)) {
+      const url = readConfiguredHttpUrl(projectConfig?.mcpServers?.[serverName]);
+      if (url) {
+        discoveredUrls.add(url);
+      }
+    }
+
+    if (discoveredUrls.size === 1) {
+      return Array.from(discoveredUrls)[0];
+    }
+  } catch {}
+
+  return '';
+}
+
 function resolveMcpUrl() {
-  const explicit = process.env.PREQSTATION_MCP_URL?.trim();
+  const explicit = normalizeString(process.env.PREQSTATION_MCP_URL);
   if (explicit) {
     return resolvePreqMcpUrl(explicit);
   }
 
-  const legacyApiUrl = process.env.PREQSTATION_API_URL?.trim();
+  const configured = readClaudeConfiguredPreqMcpUrl();
+  if (configured) {
+    return resolvePreqMcpUrl(configured);
+  }
+
+  const legacyApiUrl = normalizeString(process.env.PREQSTATION_API_URL);
   if (legacyApiUrl) {
     return resolvePreqMcpUrl(`${legacyApiUrl.replace(/\/$/, '')}/mcp`);
   }
 
-  throw new Error('PREQSTATION_MCP_URL is required.');
+  throw new Error(
+    'PREQSTATION_MCP_URL is required unless Claude already has a preqstation MCP server configured.',
+  );
 }
 
 export function createChannelInstructions() {
