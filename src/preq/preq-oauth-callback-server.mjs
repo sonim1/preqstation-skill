@@ -4,11 +4,18 @@ function html(body) {
   return `<!doctype html><html><body>${body}</body></html>`;
 }
 
+function createAbortError() {
+  const error = new Error('OAuth authorization was cancelled.');
+  error.name = 'AbortError';
+  return error;
+}
+
 export function waitForOAuthAuthorizationCode({
   host = '127.0.0.1',
   port,
   pathname = '/callback',
   logger = console,
+  signal,
 }) {
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -16,8 +23,16 @@ export function waitForOAuthAuthorizationCode({
     const finish = (fn, value) => {
       if (settled) return;
       settled = true;
-      server.close();
-      fn(value);
+      signal?.removeEventListener?.('abort', handleAbort);
+      try {
+        server.close(() => fn(value));
+      } catch {
+        fn(value);
+      }
+    };
+
+    const handleAbort = () => {
+      finish(reject, createAbortError());
     };
 
     const server = createServer((req, res) => {
@@ -60,6 +75,13 @@ export function waitForOAuthAuthorizationCode({
     server.on('error', (error) => {
       finish(reject, error);
     });
+
+    if (signal?.aborted) {
+      handleAbort();
+      return;
+    }
+
+    signal?.addEventListener?.('abort', handleAbort, { once: true });
 
     server.listen(port, host, () => {
       logger.error(

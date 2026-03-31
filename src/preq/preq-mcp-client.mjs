@@ -99,6 +99,7 @@ async function connectClientWithOAuth({
   callbackHost,
   callbackPort,
   callbackPath,
+  setPendingOAuthController,
   logger,
 }) {
   let transport = new StreamableHTTPClientTransport(new URL(mcpUrl), {
@@ -114,11 +115,17 @@ async function connectClientWithOAuth({
     }
   }
 
+  const pendingOAuthController = new AbortController();
+  setPendingOAuthController?.(pendingOAuthController);
+
   const authorizationCode = await waitForOAuthAuthorizationCode({
     host: callbackHost,
     port: callbackPort,
     pathname: callbackPath,
     logger,
+    signal: pendingOAuthController.signal,
+  }).finally(() => {
+    setPendingOAuthController?.(null);
   });
 
   await transport.finishAuth(authorizationCode);
@@ -153,6 +160,11 @@ export function createPreqMcpTaskClient({
 
   let client = null;
   let transport = null;
+  let pendingOAuthController = null;
+
+  function setPendingOAuthController(controller) {
+    pendingOAuthController = controller;
+  }
 
   async function ensureConnection(forceReconnect = false) {
     if (forceReconnect && transport) {
@@ -184,6 +196,7 @@ export function createPreqMcpTaskClient({
       callbackHost,
       callbackPort,
       callbackPath,
+      setPendingOAuthController,
       logger,
     });
 
@@ -214,6 +227,8 @@ export function createPreqMcpTaskClient({
       return fetchTaskViaMcp({ callTool, taskId });
     },
     async close() {
+      pendingOAuthController?.abort?.();
+      pendingOAuthController = null;
       if (!transport) return;
       try {
         await transport.close();

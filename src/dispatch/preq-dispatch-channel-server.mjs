@@ -261,11 +261,31 @@ export async function createPreqChannelServer({
 
 export async function main() {
   const server = await createPreqChannelServer();
-  const shutdown = () => {
-    void server.close();
+  let shuttingDown = false;
+
+  const shutdown = (signal) => {
+    const exitCode = signal === 'SIGINT' ? 130 : 143;
+
+    if (shuttingDown) {
+      process.exit(exitCode);
+    }
+
+    shuttingDown = true;
+    console.error(`[preq-dispatch-channel] shutting down (${signal})`);
+
+    const forceExitTimer = setTimeout(() => {
+      console.error('[preq-dispatch-channel] forcing exit');
+      process.exit(exitCode);
+    }, 1000);
+    forceExitTimer.unref?.();
+
+    void server.close().finally(() => {
+      clearTimeout(forceExitTimer);
+      process.exit(exitCode);
+    });
   };
-  process.on('SIGINT', shutdown);
-  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
 }
 
 const isMainModule = import.meta.url === new URL(process.argv[1], 'file://').href;
