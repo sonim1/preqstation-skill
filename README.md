@@ -31,6 +31,15 @@ Use this quick rule before installing:
 - Gemini CLI: worker skill + remote PREQ MCP where supported; no Claude-style Channels or Dispatch layer is involved
 - Telegram/OpenClaw: legacy dispatch ingress that still lives in `preqstation-openclaw`
 
+## Claude Plugin Install Modes
+
+Use one of these two Claude-only paths:
+
+- fastest local development loop: `claude --plugin-dir /path/to/preqstation-skill`
+- official install UX smoke test: create a local plugin marketplace, then run `claude plugin install preqstation@preqstation-local`
+
+The second path is the right one when you want to test the same install surface described in the Claude plugin marketplace docs.
+
 ## Quick Start
 
 ### Claude Code
@@ -76,6 +85,7 @@ OAuth starts when the client first makes a real request to `/mcp`.
 Use this repository today for:
 
 - a local Claude plugin skeleton for `--plugin-dir` testing
+- a Claude plugin package that can be smoke-tested through a local marketplace + `claude plugin install`
 - worker-side task execution through the `preqstation` skill
 - remote PREQ MCP access over HTTP + OAuth
 - an experimental local Claude dispatch channel runtime
