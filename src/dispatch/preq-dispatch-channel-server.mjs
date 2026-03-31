@@ -48,6 +48,23 @@ export function createChannelInstructions() {
   ].join(' ');
 }
 
+export function isCallbackPortInUseError(error) {
+  const message = error instanceof Error ? error.message : String(error ?? '');
+  return /EADDRINUSE/i.test(message);
+}
+
+export function describeDispatchChannelError(error, oauthCallbackPort) {
+  if (isCallbackPortInUseError(error)) {
+    return [
+      `OAuth callback port ${oauthCallbackPort} is already in use.`,
+      'Another PREQ dispatch session is probably running.',
+      'Stop the other process or set PREQSTATION_OAUTH_CALLBACK_PORT to a free port.',
+    ].join(' ');
+  }
+
+  return error instanceof Error ? error.message : String(error ?? '');
+}
+
 export async function emitQueuedTaskEvents({
   mcp,
   tasks,
@@ -95,6 +112,22 @@ export async function createPreqChannelServer({
   await mcp.connect(new StdioServerTransport());
   logger.error(`[preq-dispatch-channel] connected to ${mcpUrl}`);
 
+  let pollingStopped = false;
+
+  const handlePollError = (error) => {
+    logger.error(`[preq-dispatch-channel] ${describeDispatchChannelError(error, oauthCallbackPort)}`);
+
+    if (pollingStopped || !isCallbackPortInUseError(error)) {
+      return;
+    }
+
+    pollingStopped = true;
+    clearInterval(interval);
+    logger.error(
+      '[preq-dispatch-channel] polling stopped until the callback port conflict is resolved',
+    );
+  };
+
   const pollOnce = async () => {
     const tasks = await taskClient.listTodoTasks();
     const count = await emitQueuedTaskEvents({ mcp, tasks, inflightTaskKeys });
@@ -105,11 +138,7 @@ export async function createPreqChannelServer({
   };
 
   const interval = setInterval(() => {
-    pollOnce().catch((error) => {
-      logger.error(
-        `[preq-dispatch-channel] ${error instanceof Error ? error.message : String(error)}`,
-      );
-    });
+    pollOnce().catch(handlePollError);
   }, pollIntervalMs);
 
   interval.unref?.();
@@ -120,11 +149,7 @@ export async function createPreqChannelServer({
         logger.error('[preq-dispatch-channel] watching for queued Claude Code dispatch tasks');
       }
     })
-    .catch((error) => {
-      logger.error(
-        `[preq-dispatch-channel] ${error instanceof Error ? error.message : String(error)}`,
-      );
-    });
+    .catch(handlePollError);
 
   return {
     mcp,
