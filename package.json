@@ -1,6 +1,6 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "description": "PREQSTATION local agent package with worker skill docs and a local Claude plugin skeleton",
   "type": "module",
   "scripts": {

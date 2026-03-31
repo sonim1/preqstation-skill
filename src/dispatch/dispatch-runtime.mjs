@@ -325,22 +325,38 @@ export function renderDispatchPrompt({
   branchName,
   engine,
   objective,
+  worktreePath,
+  projectPath,
+  qaRunId,
+  qaTaskKeys,
 }) {
+  const qaTaskKeysValue = Array.isArray(qaTaskKeys)
+    ? qaTaskKeys.map((taskId) => normalizeString(taskId)).filter(Boolean).join(', ')
+    : '';
   return [
     `Task ID: ${taskKey || 'N/A'}`,
     `Project Key: ${projectKey || 'N/A'}`,
     `Branch Name: ${branchName || 'N/A'}`,
+    `QA Run ID: ${qaRunId || 'N/A'}`,
+    `QA Task Keys: ${qaTaskKeysValue || 'N/A'}`,
     `Lifecycle Skill: preqstation (use preq_* MCP tools for task lifecycle)`,
     `User Objective: ${objective || 'implement'}`,
     '',
     'Execution Requirements:',
-    '1) Work only inside the current workspace.',
-    '2) Read and execute instructions from this file as the source of truth.',
-    `3) If Task ID is present, call preq_get_task("${taskKey}") first before planning or implementation.`,
-    `4) Then call preq_start_task("${taskKey}", "${engine}") before substantive work so PREQSTATION records run_state=working.`,
-    '5) Use the preqstation lifecycle skill for all PREQ rules, status transitions, deploy handling, and preq_* tool usage.',
-    '6) If this file is missing, stop and report a dispatch failure instead of improvising.',
-    `7) Use branch ${branchName || 'N/A'} for commits and pushes when applicable.`,
+    `1) Work only inside ${worktreePath || 'the current workspace'}.`,
+    `2) Use branch ${branchName || 'N/A'} for commits and pushes when provided.`,
+    `3) If Task ID is present, your first lifecycle action must be preq_get_task("${taskKey}") before asking the user for task text, before planning, and before implementation. Use the fetched task as the source of truth for title, description, acceptance criteria, and status.`,
+    `4) If the fetched task is active (inbox, todo, hold, or ready), call preq_start_task("${taskKey}", "${engine}") immediately after preq_get_task and before any planning, implementation, or verification so PREQSTATION records run_state=working.`,
+    '5) Treat workflow status and execution state separately. Valid workflow statuses are inbox, todo, hold, ready, done, and archived. Valid run_state values are queued, working, and null. Do not emit legacy workflow statuses.',
+    '6) Must follow the Execution Flow in the PREQSTATION MCP skill.',
+    `7) Do not ask the user to paste the task card text or preq_get_task output when preq_get_task("${taskKey}") is available. Ask only if the tool call itself fails or PREQ tools are unavailable.`,
+    '8) Use the preqstation lifecycle skill as the single source of truth for PREQ task rules, status transitions, deploy handling, and preq_* tool usage.',
+    '9) If User Objective starts with plan, do not run tests, build, lint, or other verification commands. Read local code only enough to produce the plan and stop after preq_plan_task.',
+    '10) If User Objective starts with qa, Task ID may be N/A. In that branch, use QA Run ID as the external reporting handle, update it through the PREQSTATION skill, and do not invent a task lifecycle transition.',
+    '11) If User Objective starts with qa and QA Task Keys is present, call preq_get_task for each listed task key before browser testing. Treat those tasks as the QA scope and keep QA limited to that scope.',
+    '12) If the current agent has access to the dogfood skill, use it as the default QA workflow for browser testing and report generation.',
+    '13) If ./.preqstation-prompt.txt is missing in the current workspace, stop and report a dispatch failure instead of improvising from another directory.',
+    `14) Worktree cleanup after all work:\n    git -C ${projectPath || '<project_cwd>'} worktree remove ${worktreePath || '<cwd>'} --force\n    git -C ${projectPath || '<project_cwd>'} worktree prune`,
   ].join('\n');
 }
 
@@ -372,6 +388,8 @@ export function buildEngineLaunchSpec(engine, options = {}) {
     'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace.',
     'Treat that file as the source of truth.',
     'If that file is missing, stop immediately.',
+    'If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work.',
+    'If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
   ].join(' ');
 
   switch (normalizeString(engine).toLowerCase()) {
@@ -486,6 +504,8 @@ export async function dispatchTask({
     branchName: resolvedBranchName,
     engine: resolvedEngine,
     objective: action || 'implement',
+    worktreePath,
+    projectPath,
   });
 
   const launch = await launchDispatchProcess({

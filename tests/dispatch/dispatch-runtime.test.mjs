@@ -9,6 +9,7 @@ import {
   defaultBranchName,
   normalizeRepoUrl,
   parseWorktreeList,
+  renderDispatchPrompt,
   slugifyBranchName,
   writeClaudeChildMcpConfig,
 } from '../../src/dispatch/dispatch-runtime.mjs';
@@ -72,7 +73,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
       '/tmp/preqstation-mcp.json',
       '--dangerously-skip-permissions',
       '-p',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
@@ -82,10 +83,31 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
     args: [
       'exec',
       '--dangerously-bypass-approvals-and-sandbox',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
+});
+
+test('renderDispatchPrompt matches the shared PREQ dispatch contract', () => {
+  const prompt = renderDispatchPrompt({
+    taskKey: 'PROJ-295',
+    projectKey: 'PROJ',
+    branchName: 'task/proj-295/mobile-view-skeleton',
+    engine: 'claude-code',
+    objective: 'plan',
+    worktreePath: '/tmp/preqstation-dispatch-worktrees/PROJ/task-proj-295-mobile-view-skeleton',
+    projectPath: '/Users/example/projects/proj',
+  });
+
+  assert.match(prompt, /Task ID: PROJ-295/);
+  assert.match(prompt, /User Objective: plan/);
+  assert.match(prompt, /QA Run ID: N\/A/);
+  assert.match(prompt, /QA Task Keys: N\/A/);
+  assert.match(prompt, /your first lifecycle action must be preq_get_task\("PROJ-295"\)/);
+  assert.match(prompt, /call preq_start_task\("PROJ-295", "claude-code"\) immediately/);
+  assert.match(prompt, /If User Objective starts with plan, do not run tests, build, lint/);
+  assert.match(prompt, /git -C \/Users\/example\/projects\/proj worktree remove \/tmp\/preqstation-dispatch-worktrees\/PROJ\/task-proj-295-mobile-view-skeleton --force/);
 });
 
 test('writeClaudeChildMcpConfig writes a project-local PREQ MCP config', async () => {
