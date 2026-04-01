@@ -9,7 +9,7 @@ test('plugin manifest declares the dispatch MCP server inline', async () => {
   assert.deepEqual(manifest.mcpServers, {
     'preq-dispatch-channel': {
       command: 'node',
-      args: ['${CLAUDE_PLUGIN_ROOT}/src/dispatch/preq-dispatch-channel-server.mjs'],
+      args: ['${CLAUDE_PLUGIN_ROOT}/dist/preq-dispatch-channel-server.mjs'],
       env: {
         PREQSTATION_OAUTH_CALLBACK_PORT: '45451',
         PREQ_POLL_INTERVAL_MS: '5000',

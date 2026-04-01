@@ -1,7 +1,7 @@
 {
   "name": "preqstation",
   "description": "PREQSTATION worker skill and Claude dispatch plugin for PREQ task execution",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "author": {
     "name": "PREQSTATION"
   },
@@ -12,7 +12,7 @@
     "preq-dispatch-channel": {
       "command": "node",
       "args": [
-        "${CLAUDE_PLUGIN_ROOT}/src/dispatch/preq-dispatch-channel-server.mjs"
+        "${CLAUDE_PLUGIN_ROOT}/dist/preq-dispatch-channel-server.mjs"
       ],
       "env": {
         "PREQSTATION_OAUTH_CALLBACK_PORT": "45451",
