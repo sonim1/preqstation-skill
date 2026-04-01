@@ -52,6 +52,8 @@ If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or
 }
 ```
 
+With the Claude plugin installed, `/preqstation:setup` should guide this flow, optionally fetch the PREQ project list, ask whether to auto-scan or manually map repos, and persist the final mappings into `~/.preqstation-dispatch/projects.json`.
+
 ## 3. Start Claude Code with the local channel
 
 ### Option A: direct repo development mode

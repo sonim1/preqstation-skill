@@ -4,6 +4,13 @@ Reference for direct REST API usage when MCP and shell helpers are unavailable.
 
 All requests require: `Authorization: Bearer $PREQSTATION_TOKEN`
 
+## List Projects
+
+```bash
+curl -s -H "Authorization: Bearer $PREQSTATION_TOKEN" \
+  "$PREQSTATION_API_URL/api/projects" | jq .
+```
+
 ## List Todo Tasks
 
 ```bash

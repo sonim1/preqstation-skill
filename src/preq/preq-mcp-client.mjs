@@ -49,6 +49,11 @@ export function readTasksFromPreqListTasksResult(result) {
   return Array.isArray(payload?.tasks) ? payload.tasks : [];
 }
 
+export function readProjectsFromPreqListProjectsResult(result) {
+  const payload = readJsonFromToolResult(result);
+  return Array.isArray(payload?.projects) ? payload.projects : [];
+}
+
 export function readTaskFromPreqGetTaskResult(result) {
   const payload = readJsonFromToolResult(result);
   return payload?.task || payload || null;
@@ -94,6 +99,17 @@ export async function fetchTaskViaMcp({
   });
 
   return readTaskFromPreqGetTaskResult(result);
+}
+
+export async function fetchProjectsViaMcp({
+  callTool,
+}) {
+  const result = await callTool({
+    name: 'preq_list_projects',
+    arguments: {},
+  });
+
+  return readProjectsFromPreqListProjectsResult(result);
 }
 
 async function connectClientWithOAuth({
@@ -225,6 +241,9 @@ export function createPreqMcpTaskClient({
 
   return {
     mcpUrl: resolvedMcpUrl,
+    listProjects() {
+      return fetchProjectsViaMcp({ callTool });
+    },
     listTodoTasks() {
       return fetchTodoTasksViaMcp({ callTool });
     },

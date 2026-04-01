@@ -2,8 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  fetchProjectsViaMcp,
   fetchTaskViaMcp,
   fetchTodoTasksViaMcp,
+  readProjectsFromPreqListProjectsResult,
   readTaskFromPreqGetTaskResult,
   readTasksFromPreqListTasksResult,
 } from '../../src/preq/preq-mcp-client.mjs';
@@ -23,6 +25,28 @@ test('readTasksFromPreqListTasksResult parses JSON text content from preq_list_t
 
   assert.deepEqual(readTasksFromPreqListTasksResult(result), [
     { task_key: 'PROJ-1', status: 'todo', run_state: 'queued' },
+  ]);
+});
+
+test('readProjectsFromPreqListProjectsResult parses JSON text content from preq_list_projects', () => {
+  const result = {
+    content: [
+      {
+        type: 'text',
+        text: JSON.stringify({
+          count: 2,
+          projects: [
+            { key: 'PROJ', name: 'Project One', repoUrl: 'https://github.com/acme/proj' },
+            { key: 'OPS', name: 'Operations', repoUrl: null },
+          ],
+        }),
+      },
+    ],
+  };
+
+  assert.deepEqual(readProjectsFromPreqListProjectsResult(result), [
+    { key: 'PROJ', name: 'Project One', repoUrl: 'https://github.com/acme/proj' },
+    { key: 'OPS', name: 'Operations', repoUrl: null },
   ]);
 });
 
@@ -93,6 +117,39 @@ test('fetchTodoTasksViaMcp queries inbox and todo tasks for every PREQ engine an
     { task_key: 'PROJ-1', status: 'inbox', run_state: 'queued', engine: 'claude-code' },
     { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
     { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
+  ]);
+});
+
+test('fetchProjectsViaMcp queries preq_list_projects and returns the project list payload', async () => {
+  const calls = [];
+  const projects = await fetchProjectsViaMcp({
+    callTool: async ({ name, arguments: args }) => {
+      calls.push({ name, args });
+      return {
+        content: [
+          {
+            type: 'text',
+            text: JSON.stringify({
+              projects: [
+                { key: 'PROJ', name: 'Project One', repoUrl: 'https://github.com/acme/proj' },
+                { key: 'OPS', name: 'Operations', repoUrl: null },
+              ],
+            }),
+          },
+        ],
+      };
+    },
+  });
+
+  assert.deepEqual(calls, [
+    {
+      name: 'preq_list_projects',
+      args: {},
+    },
+  ]);
+  assert.deepEqual(projects, [
+    { key: 'PROJ', name: 'Project One', repoUrl: 'https://github.com/acme/proj' },
+    { key: 'OPS', name: 'Operations', repoUrl: null },
   ]);
 });
 

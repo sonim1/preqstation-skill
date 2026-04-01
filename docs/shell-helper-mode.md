@@ -6,6 +6,7 @@ Source `scripts/preqstation-api.sh`, then use these helpers:
 
 | Function | Signature |
 | --- | --- |
+| `preq_list_projects` | `preq_list_projects` |
 | `preq_get_tasks` | `preq_get_tasks [status] [label]` |
 | `preq_get_task` | `preq_get_task <task_id>` |
 | `preq_get_project_settings` | `preq_get_project_settings <project_key>` |

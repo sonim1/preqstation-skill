@@ -48,6 +48,8 @@ After Claude Code starts with the plugin loaded, you can use:
 - `/preqstation:status`
 - `/preqstation:start-dispatch`
 
+`/preqstation:setup` should verify PREQ MCP connectivity and manage local project mappings in `~/.preqstation-dispatch/projects.json`.
+
 ## 4. Configure PREQ MCP access
 
 The plugin does not replace PREQ MCP setup.

@@ -53,6 +53,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 
 | Tool                        | engine usage                                                                                                         |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `preq_list_projects`        | Read-only, no engine needed (list PREQ projects for setup and local repo mapping)                                   |
 | `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
 | `preq_get_task`             | Read-only, no engine needed                                                                                          |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |

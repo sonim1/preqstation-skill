@@ -92,12 +92,15 @@ Use this repository today for:
 - an experimental local Claude dispatch channel runtime with a built-in `dispatch_task` launcher tool
 - shell helper fallback when MCP is unavailable
 
+For Claude local dispatch setup, project key to local repo mappings live in `~/.preqstation-dispatch/projects.json`. `/preqstation:setup` should use that file as the canonical local mapping store.
+
 The local plugin and dispatch runtime are Claude-specific. Codex and Gemini still use the worker/MCP path and do not have a Claude-style channel or dispatch surface here.
 
 The current production OpenClaw dispatcher still lives in `preqstation-openclaw`. This repository now includes an experimental dispatch channel for local development and early migration work, but the full production migration is not complete yet.
 
 ## Exposed MCP Tools
 
+- `preq_list_projects`: list PREQ projects for setup and local repo mapping flows
 - `preq_list_tasks`: workflow status filter (`inbox`/`todo`/`hold`/`ready`/`done`/`archived`, `projectKey` optional)
 - `preq_get_task`: fetch single ticket detail by ticket number
 - `preq_get_project_settings`: fetch project settings by key (`/api/projects/:key/settings`)
