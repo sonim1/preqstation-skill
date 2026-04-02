@@ -55,6 +55,8 @@ If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or
 
 With the Claude plugin installed, `/preqstation:setup` should guide this flow, optionally fetch the PREQ project list, ask whether to auto-scan or manually map repos, and persist the final mappings into `~/.preqstation-dispatch/projects.json`.
 
+The slash commands are optional helpers. The dispatch runtime itself is started from the terminal commands below.
+
 ## 3. Start Claude Code with the local channel
 
 ### Option A: direct repo development mode
@@ -70,7 +72,7 @@ claude --mcp-config /path/to/preqstation-skill/mcp-dev.json --dangerously-skip-p
 If you want to test the same install surface as `/plugin install`, first follow [install-claude-plugin.md](install-claude-plugin.md) to install `preqstation`, then start Claude with:
 
 ```bash
-claude --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
+claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation
 ```
 
 The plugin now uses its own bundled MCP config, so this command should work from the repo root without colliding with direct bare-server testing.
@@ -78,7 +80,7 @@ The plugin now uses its own bundled MCP config, so this command should work from
 If you need to confirm emit and consume behavior in plugin mode, add a debug log file:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
+claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation
 tail -f /tmp/preqstation-dispatch-debug.log
 ```
 

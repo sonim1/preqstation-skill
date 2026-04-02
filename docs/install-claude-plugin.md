@@ -50,6 +50,8 @@ After Claude Code starts with the plugin loaded, you can use:
 
 `/preqstation:setup` should verify PREQ MCP connectivity and manage local project mappings in `~/.preqstation-dispatch/projects.json`.
 
+`/preqstation:start-dispatch` remains available as a helper, but the actual dispatch runtime is easier to start directly from the terminal.
+
 ## 4. Configure PREQ MCP access
 
 The plugin does not replace PREQ MCP setup.
@@ -68,18 +70,21 @@ The plugin can also be used as a Claude Channels source during local testing.
 When testing a locally installed marketplace plugin, use:
 
 ```bash
-export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
-claude --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
+claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation
 ```
 
-If Claude already has `preqstation` configured via `claude mcp add --transport http preqstation https://<your-domain>/mcp`, the dispatch channel will reuse that URL automatically and the export is optional.
+If Claude does not already have the remote PREQ MCP server configured, register it first with:
+
+```bash
+claude mcp add --transport http preqstation https://<your-domain>/mcp
+```
 
 The plugin now ships its own bundled MCP config, separate from the repo's direct development config. That means plugin testing and bare-server testing no longer need to share the same root `.mcp.json`.
 
 If you want to see whether the installed plugin actually emitted and consumed a queued task, run the dispatcher session with a debug log:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
+claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation
 ```
 
 Then inspect:
