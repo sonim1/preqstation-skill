@@ -30400,13 +30400,24 @@ async function ensureWorktree({
   const targetPath = path.join(worktreeRoot, toProjectKey(projectKey), slugifyBranchName(normalizedBranchName));
   await mkdir(path.dirname(targetPath), { recursive: true });
   const { stdout } = await runCommand("git", ["-C", projectPath, "worktree", "list", "--porcelain"]);
-  const worktrees = parseWorktreeList(stdout);
+  let worktrees = parseWorktreeList(stdout);
   const branchRef = `refs/heads/${normalizedBranchName}`;
   const reusable = worktrees.find(
     (worktree) => worktree.path !== projectPath && (worktree.path === targetPath || worktree.branch === branchRef)
   );
   if (reusable) {
-    return reusable.path;
+    if (await pathExists(reusable.path)) {
+      return reusable.path;
+    }
+    await runCommand("git", ["-C", projectPath, "worktree", "prune"]);
+    const refreshed = await runCommand("git", ["-C", projectPath, "worktree", "list", "--porcelain"]);
+    worktrees = parseWorktreeList(refreshed.stdout);
+    const refreshedReusable = worktrees.find(
+      (worktree) => worktree.path !== projectPath && (worktree.path === targetPath || worktree.branch === branchRef)
+    );
+    if (refreshedReusable && await pathExists(refreshedReusable.path)) {
+      return refreshedReusable.path;
+    }
   }
   const branchInPrimaryCheckout = worktrees.some(
     (worktree) => worktree.path === projectPath && worktree.branch === branchRef
@@ -33171,7 +33182,7 @@ function createPreqMcpTaskClient({
 }
 
 // src/dispatch/preq-dispatch-channel-server.mjs
-var PREQ_CHANNEL_SERVER_VERSION = "0.1.23";
+var PREQ_CHANNEL_SERVER_VERSION = "0.1.24";
 var DEFAULT_CLAUDE_CONFIG_PATH = path3.join(os3.homedir(), ".claude.json");
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();

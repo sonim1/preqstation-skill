@@ -256,14 +256,28 @@ export async function ensureWorktree({
   await mkdir(path.dirname(targetPath), { recursive: true });
 
   const { stdout } = await runCommand('git', ['-C', projectPath, 'worktree', 'list', '--porcelain']);
-  const worktrees = parseWorktreeList(stdout);
+  let worktrees = parseWorktreeList(stdout);
   const branchRef = `refs/heads/${normalizedBranchName}`;
 
   const reusable = worktrees.find(
     (worktree) => worktree.path !== projectPath && (worktree.path === targetPath || worktree.branch === branchRef),
   );
   if (reusable) {
-    return reusable.path;
+    if (await pathExists(reusable.path)) {
+      return reusable.path;
+    }
+
+    await runCommand('git', ['-C', projectPath, 'worktree', 'prune']);
+    const refreshed = await runCommand('git', ['-C', projectPath, 'worktree', 'list', '--porcelain']);
+    worktrees = parseWorktreeList(refreshed.stdout);
+
+    const refreshedReusable = worktrees.find(
+      (worktree) =>
+        worktree.path !== projectPath && (worktree.path === targetPath || worktree.branch === branchRef),
+    );
+    if (refreshedReusable && (await pathExists(refreshedReusable.path))) {
+      return refreshedReusable.path;
+    }
   }
 
   const branchInPrimaryCheckout = worktrees.some(

@@ -1,18 +1,27 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
+import { promisify } from 'node:util';
 
 import {
   buildEngineLaunchSpec,
   defaultBranchName,
+  ensureWorktree,
   normalizeRepoUrl,
   parseWorktreeList,
   renderDispatchPrompt,
   slugifyBranchName,
   writeClaudeChildMcpConfig,
 } from '../../src/dispatch/dispatch-runtime.mjs';
+
+const execFileAsync = promisify(execFile);
+
+async function runGit(cwd, args) {
+  return execFileAsync('git', ['-C', cwd, ...args], { maxBuffer: 1024 * 1024 });
+}
 
 test('normalizeRepoUrl normalizes GitHub SSH and HTTPS remotes', () => {
   assert.equal(
@@ -128,4 +137,41 @@ test('writeClaudeChildMcpConfig writes a project-local PREQ MCP config', async (
       },
     },
   });
+});
+
+test('ensureWorktree prunes stale missing worktrees before reusing a branch path', async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), 'preqstation-worktree-test-'));
+  const projectPath = path.join(root, 'repo');
+  const worktreeRoot = path.join(root, 'worktrees');
+
+  await mkdir(projectPath, { recursive: true });
+  await writeFile(path.join(projectPath, 'README.md'), 'dispatch runtime test\n');
+
+  await runGit(projectPath, ['init']);
+  await runGit(projectPath, ['config', 'user.name', 'Dispatch Test']);
+  await runGit(projectPath, ['config', 'user.email', 'dispatch@example.com']);
+  await runGit(projectPath, ['add', 'README.md']);
+  await runGit(projectPath, ['commit', '-m', 'init']);
+
+  const branchName = 'task/proj-312/add-the-copy-button-on-the-qa-runs';
+  const firstWorktreePath = await ensureWorktree({
+    projectPath,
+    projectKey: 'PROJ',
+    branchName,
+    worktreeRoot,
+  });
+
+  await rm(firstWorktreePath, { recursive: true, force: true });
+
+  const secondWorktreePath = await ensureWorktree({
+    projectPath,
+    projectKey: 'PROJ',
+    branchName,
+    worktreeRoot,
+  });
+
+  const gitDir = path.join(secondWorktreePath, '.git');
+  const readmePath = path.join(secondWorktreePath, 'README.md');
+  await readFile(gitDir, 'utf8');
+  await readFile(readmePath, 'utf8');
 });
