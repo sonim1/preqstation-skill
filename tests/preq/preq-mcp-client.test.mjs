@@ -2,9 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  fetchDispatchTasksViaMcp,
   fetchProjectsViaMcp,
   fetchTaskViaMcp,
-  fetchTodoTasksViaMcp,
   readProjectsFromPreqListProjectsResult,
   readTaskFromPreqGetTaskResult,
   readTasksFromPreqListTasksResult,
@@ -50,26 +50,23 @@ test('readProjectsFromPreqListProjectsResult parses JSON text content from preq_
   ]);
 });
 
-test('fetchTodoTasksViaMcp queries inbox and todo tasks for every PREQ engine and merges duplicates', async () => {
+test('fetchDispatchTasksViaMcp queries all tasks for every PREQ engine and merges duplicates', async () => {
   const calls = [];
-  const tasks = await fetchTodoTasksViaMcp({
+  const tasks = await fetchDispatchTasksViaMcp({
     callTool: async ({ name, arguments: args }) => {
       calls.push({ name, args });
 
-      const byEngineAndStatus = {
-        'claude-code:inbox': [
+      const byEngine = {
+        'claude-code': [
           { task_key: 'PROJ-1', status: 'inbox', run_state: 'queued', engine: 'claude-code' },
+          { task_key: 'PROJ-4', status: 'hold', run_state: 'queued', engine: 'claude-code' },
         ],
-        'claude-code:todo': [],
-        'codex:inbox': [],
-        'codex:todo': [
+        codex: [
           { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
         ],
-        'gemini-cli:inbox': [
+        'gemini-cli': [
           { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
-        ],
-        'gemini-cli:todo': [
-          { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
+          { task_key: 'PROJ-3', status: 'ready', run_state: 'working', engine: 'gemini-cli' },
         ],
       };
 
@@ -78,7 +75,7 @@ test('fetchTodoTasksViaMcp queries inbox and todo tasks for every PREQ engine an
           {
             type: 'text',
             text: JSON.stringify({
-              tasks: byEngineAndStatus[`${args.engine}:${args.status}`] || [],
+              tasks: byEngine[args.engine] || [],
             }),
           },
         ],
@@ -89,34 +86,23 @@ test('fetchTodoTasksViaMcp queries inbox and todo tasks for every PREQ engine an
   assert.deepEqual(calls, [
     {
       name: 'preq_list_tasks',
-      args: { status: 'inbox', engine: 'claude-code', limit: 200 },
+      args: { engine: 'claude-code', limit: 200 },
     },
     {
       name: 'preq_list_tasks',
-      args: { status: 'todo', engine: 'claude-code', limit: 200 },
+      args: { engine: 'codex', limit: 200 },
     },
     {
       name: 'preq_list_tasks',
-      args: { status: 'inbox', engine: 'codex', limit: 200 },
-    },
-    {
-      name: 'preq_list_tasks',
-      args: { status: 'todo', engine: 'codex', limit: 200 },
-    },
-    {
-      name: 'preq_list_tasks',
-      args: { status: 'inbox', engine: 'gemini-cli', limit: 200 },
-    },
-    {
-      name: 'preq_list_tasks',
-      args: { status: 'todo', engine: 'gemini-cli', limit: 200 },
+      args: { engine: 'gemini-cli', limit: 200 },
     },
   ]);
 
   assert.deepEqual(tasks, [
     { task_key: 'PROJ-1', status: 'inbox', run_state: 'queued', engine: 'claude-code' },
+    { task_key: 'PROJ-4', status: 'hold', run_state: 'queued', engine: 'claude-code' },
     { task_key: 'PROJ-2', status: 'todo', run_state: 'queued', engine: 'codex' },
-    { task_key: 'PROJ-3', status: 'todo', run_state: 'working', engine: 'gemini-cli' },
+    { task_key: 'PROJ-3', status: 'ready', run_state: 'working', engine: 'gemini-cli' },
   ]);
 });
 

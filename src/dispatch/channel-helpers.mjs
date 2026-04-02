@@ -32,11 +32,6 @@ function describeQueueEligibility(task, inflightTaskKeys = new Set()) {
     return { taskKey, eligible: false, reason: 'already-inflight' };
   }
 
-  const status = normalizeString(task?.status).toLowerCase();
-  if (!DISPATCHABLE_STATUSES.has(status)) {
-    return { taskKey, eligible: false, reason: `status=${status || 'missing'}` };
-  }
-
   const runState = normalizeString(task?.run_state || task?.runState).toLowerCase();
   if (runState !== 'queued') {
     return { taskKey, eligible: false, reason: `run_state=${runState || 'missing'}` };
@@ -97,4 +92,3 @@ export function buildQueuedTaskChannelEvent(task) {
     },
   };
 }
-const DISPATCHABLE_STATUSES = new Set(['inbox', 'todo', 'ready']);

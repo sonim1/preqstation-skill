@@ -7,7 +7,7 @@ import {
   summarizeQueuedTaskSelection,
 } from '../../src/dispatch/channel-helpers.mjs';
 
-test('selectQueuedTasks returns inbox, todo, or ready tasks with queued run_state that are not inflight', () => {
+test('selectQueuedTasks ignores status and only requires queued run_state plus Claude dispatch target', () => {
   const tasks = [
     {
       task_key: 'PROJ-1',
@@ -66,6 +66,12 @@ test('selectQueuedTasks returns inbox, todo, or ready tasks with queued run_stat
     {
       task_key: 'PROJ-3',
       status: 'ready',
+      run_state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      task_key: 'PROJ-5',
+      status: 'hold',
       run_state: 'queued',
       dispatch_target: 'claude-code-channel',
     },

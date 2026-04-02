@@ -89,7 +89,7 @@ You should be able to:
 
 - run `claude mcp list` and see `preq-dispatch-channel`
 - see queued-task poll logs in the Claude terminal
-- receive emitted channel events for PREQ tasks where `status=inbox|todo` and `run_state=queued`
+- receive emitted channel events for PREQ tasks where `run_state=queued` and `dispatch_target=claude-code-channel`
 - see Claude call the built-in `dispatch_task` tool when those events arrive in a Claude dispatch session
 - when using plugin-install mode, verify `claude plugin list` includes `preqstation@preqstation`
 
@@ -99,7 +99,7 @@ This runtime currently does these things:
 
 - connects to PREQ `/mcp` with OAuth
 - calls `preq_list_tasks` across `claude-code`, `codex`, and `gemini-cli`
-- filters queued inbox and todo tasks
+- filters queued Claude Code dispatch tasks by `run_state=queued` and `dispatch_target=claude-code-channel`
 - emits Claude channel events into the current dispatcher session
 - exposes a `dispatch_task` tool so the Claude dispatcher session can create an isolated worktree and launch the requested engine as a child process
 
