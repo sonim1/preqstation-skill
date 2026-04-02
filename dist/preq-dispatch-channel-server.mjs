@@ -32791,6 +32791,7 @@ function waitForOAuthAuthorizationCode({
 // src/preq/preq-oauth-provider.mjs
 import os2 from "node:os";
 import path2 from "node:path";
+import { spawn as spawn2 } from "node:child_process";
 import { mkdir as mkdir2, readFile as readFile2, writeFile as writeFile2 } from "node:fs/promises";
 var DEFAULT_OAUTH_CACHE_PATH = path2.join(
   os2.homedir(),
@@ -32820,6 +32821,33 @@ async function readState(cachePath) {
 async function writeState(cachePath, state) {
   await mkdir2(path2.dirname(cachePath), { recursive: true });
   await writeFile2(cachePath, JSON.stringify(state, null, 2));
+}
+function browserOpenCommandForPlatform(platform) {
+  if (platform === "darwin") {
+    return { command: "open", args: [] };
+  }
+  if (platform === "win32") {
+    return { command: "cmd", args: ["/c", "start", ""] };
+  }
+  if (platform === "linux") {
+    return { command: "xdg-open", args: [] };
+  }
+  return null;
+}
+async function openAuthorizationUrlInBrowser(authorizationUrl, {
+  platform = process.platform,
+  spawnImpl = spawn2
+} = {}) {
+  const launcher = browserOpenCommandForPlatform(platform);
+  if (!launcher) {
+    return false;
+  }
+  const child = spawnImpl(launcher.command, [...launcher.args, String(authorizationUrl)], {
+    detached: true,
+    stdio: "ignore"
+  });
+  child.unref?.();
+  return true;
 }
 var FileOAuthClientProvider = class {
   constructor({
@@ -32861,7 +32889,21 @@ var FileOAuthClientProvider = class {
     this._logger.error(
       `[preq-dispatch-channel] Complete OAuth in your browser: ${authorizationUrl.toString()}`
     );
-    await this._onRedirect?.(authorizationUrl);
+    if (this._onRedirect) {
+      await this._onRedirect(authorizationUrl);
+      return;
+    }
+    try {
+      const opened = await openAuthorizationUrlInBrowser(authorizationUrl);
+      if (opened) {
+        this._logger.error("[preq-dispatch-channel] Opened the PREQ OAuth page in your browser.");
+      }
+    } catch (error48) {
+      const message = error48 instanceof Error ? error48.message : String(error48 ?? "Unknown error");
+      this._logger.error(
+        `[preq-dispatch-channel] Failed to open the browser automatically: ${message}`
+      );
+    }
   }
   async saveCodeVerifier(codeVerifier) {
     const state = await readState(this.cachePath);
@@ -33129,7 +33171,7 @@ function createPreqMcpTaskClient({
 }
 
 // src/dispatch/preq-dispatch-channel-server.mjs
-var PREQ_CHANNEL_SERVER_VERSION = "0.1.22";
+var PREQ_CHANNEL_SERVER_VERSION = "0.1.23";
 var DEFAULT_CLAUDE_CONFIG_PATH = path3.join(os3.homedir(), ".claude.json");
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();

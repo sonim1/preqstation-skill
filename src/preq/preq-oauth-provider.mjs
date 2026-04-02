@@ -1,5 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 
 export const DEFAULT_OAUTH_CACHE_PATH = path.join(
@@ -33,6 +34,43 @@ async function readState(cachePath) {
 async function writeState(cachePath, state) {
   await mkdir(path.dirname(cachePath), { recursive: true });
   await writeFile(cachePath, JSON.stringify(state, null, 2));
+}
+
+function browserOpenCommandForPlatform(platform) {
+  if (platform === 'darwin') {
+    return { command: 'open', args: [] };
+  }
+
+  if (platform === 'win32') {
+    return { command: 'cmd', args: ['/c', 'start', ''] };
+  }
+
+  if (platform === 'linux') {
+    return { command: 'xdg-open', args: [] };
+  }
+
+  return null;
+}
+
+export async function openAuthorizationUrlInBrowser(
+  authorizationUrl,
+  {
+    platform = process.platform,
+    spawnImpl = spawn,
+  } = {},
+) {
+  const launcher = browserOpenCommandForPlatform(platform);
+  if (!launcher) {
+    return false;
+  }
+
+  const child = spawnImpl(launcher.command, [...launcher.args, String(authorizationUrl)], {
+    detached: true,
+    stdio: 'ignore',
+  });
+
+  child.unref?.();
+  return true;
 }
 
 export class FileOAuthClientProvider {
@@ -82,7 +120,22 @@ export class FileOAuthClientProvider {
     this._logger.error(
       `[preq-dispatch-channel] Complete OAuth in your browser: ${authorizationUrl.toString()}`,
     );
-    await this._onRedirect?.(authorizationUrl);
+    if (this._onRedirect) {
+      await this._onRedirect(authorizationUrl);
+      return;
+    }
+
+    try {
+      const opened = await openAuthorizationUrlInBrowser(authorizationUrl);
+      if (opened) {
+        this._logger.error('[preq-dispatch-channel] Opened the PREQ OAuth page in your browser.');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error ?? 'Unknown error');
+      this._logger.error(
+        `[preq-dispatch-channel] Failed to open the browser automatically: ${message}`,
+      );
+    }
   }
 
   async saveCodeVerifier(codeVerifier) {

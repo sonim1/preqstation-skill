@@ -72,15 +72,15 @@ claude --mcp-config /path/to/preqstation-skill/mcp-dev.json --dangerously-skip-p
 If you want to test the same install surface as `/plugin install`, first follow [install-claude-plugin.md](install-claude-plugin.md) to install `preqstation`, then start Claude with:
 
 ```bash
-claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
+claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
-The plugin now uses its own bundled MCP config, so this command should work from the repo root without colliding with direct bare-server testing.
+The plugin now uses its own bundled MCP config, so this command should work from the repo root without colliding with direct bare-server testing. During the current research preview, do not add `--channels plugin:preqstation@preqstation` here. The official Claude docs say the development bypass does not carry over to `--channels` entries.
 
 If you need to confirm emit and consume behavior in plugin mode, add a debug log file:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
+claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
 tail -f /tmp/preqstation-dispatch-debug.log
 ```
 
