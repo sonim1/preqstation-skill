@@ -1,7 +1,7 @@
 {
   "name": "preqstation",
   "description": "PREQSTATION worker skill and Claude dispatch plugin for PREQ task execution",
-  "version": "0.1.18",
+  "version": "0.1.19",
   "author": {
     "name": "PREQSTATION"
   },

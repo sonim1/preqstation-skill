@@ -69,7 +69,7 @@ When testing a locally installed marketplace plugin, use:
 
 ```bash
 export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
-claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation
+claude --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
 ```
 
 If Claude already has `preqstation` configured via `claude mcp add --transport http preqstation https://<your-domain>/mcp`, the dispatch channel will reuse that URL automatically and the export is optional.
@@ -79,7 +79,7 @@ The plugin now ships its own bundled MCP config, separate from the repo's direct
 If you want to see whether the installed plugin actually emitted and consumed a queued task, run the dispatcher session with a debug log:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation
+claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation:preq-dispatch-channel
 ```
 
 Then inspect:

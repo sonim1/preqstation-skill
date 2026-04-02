@@ -30135,10 +30135,6 @@ function describeQueueEligibility(task, inflightTaskKeys = /* @__PURE__ */ new S
   if (inflightTaskKeys.has(taskKey)) {
     return { taskKey, eligible: false, reason: "already-inflight" };
   }
-  const status = normalizeString(task?.status).toLowerCase();
-  if (!DISPATCHABLE_STATUSES.has(status)) {
-    return { taskKey, eligible: false, reason: `status=${status || "missing"}` };
-  }
   const runState = normalizeString(task?.run_state || task?.runState).toLowerCase();
   if (runState !== "queued") {
     return { taskKey, eligible: false, reason: `run_state=${runState || "missing"}` };
@@ -30190,7 +30186,6 @@ function buildQueuedTaskChannelEvent(task) {
     }
   };
 }
-var DISPATCHABLE_STATUSES = /* @__PURE__ */ new Set(["inbox", "todo"]);
 
 // src/dispatch/dispatch-runtime.mjs
 import os from "node:os";
@@ -32912,7 +32907,6 @@ var FileOAuthClientProvider = class {
 
 // src/preq/preq-mcp-client.mjs
 var PREQ_ENGINES = ["claude-code", "codex", "gemini-cli"];
-var PREQ_DISPATCHABLE_STATUSES = ["inbox", "todo"];
 var DEFAULT_MCP_CALLBACK_HOST = "127.0.0.1";
 var DEFAULT_MCP_CALLBACK_PORT = 45451;
 var DEFAULT_MCP_CALLBACK_PATH = "/callback";
@@ -32956,28 +32950,24 @@ function readTaskFromPreqGetTaskResult(result) {
   const payload = readJsonFromToolResult(result);
   return payload?.task || payload || null;
 }
-async function fetchTodoTasksViaMcp({
+async function fetchDispatchTasksViaMcp({
   callTool,
   engines = PREQ_ENGINES,
-  statuses = PREQ_DISPATCHABLE_STATUSES,
   limit = 200
 }) {
   const merged = /* @__PURE__ */ new Map();
   for (const engine of engines) {
-    for (const status of statuses) {
-      const result = await callTool({
-        name: "preq_list_tasks",
-        arguments: {
-          status,
-          engine,
-          limit
-        }
-      });
-      for (const task of readTasksFromPreqListTasksResult(result)) {
-        const identity = taskIdentity(task);
-        if (!identity || merged.has(identity)) continue;
-        merged.set(identity, task);
+    const result = await callTool({
+      name: "preq_list_tasks",
+      arguments: {
+        engine,
+        limit
       }
+    });
+    for (const task of readTasksFromPreqListTasksResult(result)) {
+      const identity = taskIdentity(task);
+      if (!identity || merged.has(identity)) continue;
+      merged.set(identity, task);
     }
   }
   return Array.from(merged.values());
@@ -33116,8 +33106,8 @@ function createPreqMcpTaskClient({
     listProjects() {
       return fetchProjectsViaMcp({ callTool });
     },
-    listTodoTasks() {
-      return fetchTodoTasksViaMcp({ callTool });
+    listDispatchTasks() {
+      return fetchDispatchTasksViaMcp({ callTool });
     },
     getTask(taskId) {
       return fetchTaskViaMcp({ callTool, taskId });
@@ -33137,7 +33127,7 @@ function createPreqMcpTaskClient({
 }
 
 // src/dispatch/preq-dispatch-channel-server.mjs
-var PREQ_CHANNEL_SERVER_VERSION = "0.1.16";
+var PREQ_CHANNEL_SERVER_VERSION = "0.1.19";
 var DEFAULT_CLAUDE_CONFIG_PATH = path3.join(os3.homedir(), ".claude.json");
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();
@@ -33384,7 +33374,7 @@ async function createPreqChannelServer({
     );
   };
   const pollOnce = async () => {
-    const tasks = await taskClient.listTodoTasks();
+    const tasks = await taskClient.listDispatchTasks();
     if (shouldDebugQueueSelection()) {
       const summary = summarizeQueuedTaskSelection(tasks, inflightTaskKeys).map(({ taskKey, reason }) => `${taskKey || "unknown"}:${reason}`).join(", ");
       logger.error(
