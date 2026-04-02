@@ -70,6 +70,8 @@ export async function fetchDispatchTasksViaMcp({
       name: 'preq_list_tasks',
       arguments: {
         engine,
+        runState: 'queued',
+        dispatchTarget: 'claude-code-channel',
         limit,
       },
     });

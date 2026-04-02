@@ -86,15 +86,30 @@ test('fetchDispatchTasksViaMcp queries all tasks for every PREQ engine and merge
   assert.deepEqual(calls, [
     {
       name: 'preq_list_tasks',
-      args: { engine: 'claude-code', limit: 200 },
+      args: {
+        engine: 'claude-code',
+        runState: 'queued',
+        dispatchTarget: 'claude-code-channel',
+        limit: 200,
+      },
     },
     {
       name: 'preq_list_tasks',
-      args: { engine: 'codex', limit: 200 },
+      args: {
+        engine: 'codex',
+        runState: 'queued',
+        dispatchTarget: 'claude-code-channel',
+        limit: 200,
+      },
     },
     {
       name: 'preq_list_tasks',
-      args: { engine: 'gemini-cli', limit: 200 },
+      args: {
+        engine: 'gemini-cli',
+        runState: 'queued',
+        dispatchTarget: 'claude-code-channel',
+        limit: 200,
+      },
     },
   ]);
 
