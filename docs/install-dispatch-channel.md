@@ -32,6 +32,7 @@ Optional override:
 
 ```bash
 export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
 ```
 
 Optional:
@@ -61,6 +62,8 @@ With the Claude plugin installed, `/preqstation:setup` should guide this flow, o
 ```bash
 claude --mcp-config /path/to/preqstation-skill/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 ```
+
+`mcp-dev.json` uses `${PREQSTATION_SKILL_ROOT}` for the server entrypoint so the config does not depend on your current working directory.
 
 ### Option B: installed plugin mode
 
