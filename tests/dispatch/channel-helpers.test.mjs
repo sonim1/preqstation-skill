@@ -7,7 +7,7 @@ import {
   summarizeQueuedTaskSelection,
 } from '../../src/dispatch/channel-helpers.mjs';
 
-test('selectQueuedTasks returns inbox or todo tasks with queued run_state that are not inflight', () => {
+test('selectQueuedTasks returns inbox, todo, or ready tasks with queued run_state that are not inflight', () => {
   const tasks = [
     {
       task_key: 'PROJ-1',
@@ -21,23 +21,34 @@ test('selectQueuedTasks returns inbox or todo tasks with queued run_state that a
       run_state: 'queued',
       dispatch_target: 'claude-code-channel',
     },
-    { task_key: 'PROJ-3', status: 'todo', run_state: 'working' },
-    { task_key: 'PROJ-4', status: 'hold', run_state: 'queued', dispatch_target: 'claude-code-channel' },
+    {
+      task_key: 'PROJ-3',
+      status: 'ready',
+      run_state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    { task_key: 'PROJ-4', status: 'todo', run_state: 'working' },
     {
       task_key: 'PROJ-5',
+      status: 'hold',
+      run_state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      task_key: 'PROJ-6',
       status: 'todo',
       run_state: 'queued',
       dispatch_target: 'telegram',
     },
     {
-      task_key: 'PROJ-6',
+      task_key: 'PROJ-7',
       status: 'todo',
       run_state: 'queued',
       dispatch_target: 'claude-code-channel',
     },
   ];
 
-  const selected = selectQueuedTasks(tasks, new Set(['PROJ-6']));
+  const selected = selectQueuedTasks(tasks, new Set(['PROJ-7']));
 
   assert.deepEqual(selected, [
     {
@@ -49,6 +60,12 @@ test('selectQueuedTasks returns inbox or todo tasks with queued run_state that a
     {
       task_key: 'PROJ-2',
       status: 'todo',
+      run_state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      task_key: 'PROJ-3',
+      status: 'ready',
       run_state: 'queued',
       dispatch_target: 'claude-code-channel',
     },

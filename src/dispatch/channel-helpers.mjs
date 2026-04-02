@@ -97,4 +97,4 @@ export function buildQueuedTaskChannelEvent(task) {
     },
   };
 }
-const DISPATCHABLE_STATUSES = new Set(['inbox', 'todo']);
+const DISPATCHABLE_STATUSES = new Set(['inbox', 'todo', 'ready']);
