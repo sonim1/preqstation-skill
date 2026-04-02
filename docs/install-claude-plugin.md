@@ -70,7 +70,7 @@ The plugin can also be used as a Claude Channels source during local testing.
 When testing a locally installed marketplace plugin, use:
 
 ```bash
-claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation
+claude --dangerously-skip-permissions --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
 If Claude does not already have the remote PREQ MCP server configured, register it first with:
@@ -81,10 +81,12 @@ claude mcp add --transport http preqstation https://<your-domain>/mcp
 
 The plugin now ships its own bundled MCP config, separate from the repo's direct development config. That means plugin testing and bare-server testing no longer need to share the same root `.mcp.json`.
 
+During the research preview, the development-flag bypass is per entry. It does not automatically apply to the `--channels` entry, so the same plugin id has to appear in both flags.
+
 If you want to see whether the installed plugin actually emitted and consumed a queued task, run the dispatcher session with a debug log:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation
+claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --channels plugin:preqstation@preqstation --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
 Then inspect:
