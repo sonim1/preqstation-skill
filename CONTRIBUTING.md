@@ -14,6 +14,7 @@ Useful commands:
 npm test
 npm run build:dispatch-bundle
 npm run sync:skills
+npm run verify:release
 ```
 
 ## Repository Rules
@@ -23,6 +24,7 @@ npm run sync:skills
 - Generate `skills/preqstation/SKILL.md` from the canonical copy instead of editing both manually.
 - Keep `dist/preq-dispatch-channel-server.mjs` committed. It is an intentional plugin distribution artifact.
 - `.claude-plugin/plugin.json` is the shipping plugin version. `package.json` mirrors it for local tooling.
+- This repository is not intended to be published as a general npm package.
 
 ## Docs and Packaging
 
@@ -37,6 +39,7 @@ When you change the dispatch runtime:
 - run `npm test`
 - rebuild the bundle with `npm run build:dispatch-bundle`
 - confirm the committed `dist/` artifact matches the new source
+- run `npm run verify:release`
 
 ## Contributor-Only Claude Workflows
 
@@ -63,7 +66,11 @@ When preparing a release:
 
 - bump `.claude-plugin/plugin.json`
 - bump `package.json`
+- update `package-lock.json`
+- bump the runtime version constant in `src/dispatch/preq-dispatch-channel-server.mjs`
+- run `npm run sync:skills`
 - rebuild `dist/preq-dispatch-channel-server.mjs`
+- run `npm run verify:release`
 - update `CHANGELOG.md`
 
 ## Pull Requests

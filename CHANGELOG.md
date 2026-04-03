@@ -4,8 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## Unreleased
 
-- Removed internal planning and brittle docs-only test files from the public repository surface.
-- Moved contributor-only Claude development flows into `CONTRIBUTING.md`.
+- Fixed dispatch queue recovery when a Claude channel notification fails before launch.
+- Clarified the recommended Claude install path and marked Gemini CLI support as partial.
+- Added explicit release verification and Node 18+ runtime requirements.
+
+## 0.1.26 - 2026-04-03
+
+- Fixed dispatch queue recovery when channel notification delivery fails.
+- Tightened package and release metadata around the shipped Claude plugin runtime.
+- Simplified public install docs so Claude plugin setup is the recommended path.
 
 ## 0.1.25 - 2026-04-03
 

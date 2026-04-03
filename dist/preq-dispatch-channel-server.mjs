@@ -33182,7 +33182,7 @@ function createPreqMcpTaskClient({
 }
 
 // src/dispatch/preq-dispatch-channel-server.mjs
-var PREQ_CHANNEL_SERVER_VERSION = "0.1.25";
+var PREQ_CHANNEL_SERVER_VERSION = "0.1.26";
 var DEFAULT_CLAUDE_CONFIG_PATH = path3.join(os3.homedir(), ".claude.json");
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();
@@ -33330,10 +33330,15 @@ async function emitQueuedTaskEvents({
   for (const task of queuedTasks) {
     const taskKey = task.task_key || task.taskKey || task.id;
     inflightTaskKeys.add(taskKey);
-    await mcp.server.notification({
-      method: "notifications/claude/channel",
-      params: buildQueuedTaskChannelEvent(task)
-    });
+    try {
+      await mcp.server.notification({
+        method: "notifications/claude/channel",
+        params: buildQueuedTaskChannelEvent(task)
+      });
+    } catch (error48) {
+      inflightTaskKeys.delete(taskKey);
+      throw error48;
+    }
   }
   return queuedTasks.length;
 }

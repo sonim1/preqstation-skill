@@ -4,6 +4,13 @@ Use this only when MCP is unavailable.
 
 Prefer the remote PREQ `/mcp` endpoint with OAuth whenever your agent supports it.
 
+This mode assumes you have a local checkout of this repository because the helper lives in `scripts/preqstation-api.sh`.
+
+```bash
+git clone https://github.com/sonim1/preqstation-skill.git
+cd preqstation-skill
+```
+
 ## Environment variables
 
 ```bash

@@ -6,9 +6,10 @@ Help the user set up PREQSTATION in the current environment.
 
 Use the matching documentation path:
 
-- Claude plugin: `docs/install-claude-plugin.md`
-- Claude Code worker: `docs/install-claude-code.md`
-- Codex or Gemini CLI worker: `docs/install-codex-gemini.md`
+- Claude Code plugin (recommended): `docs/install-claude-plugin.md`
+- Claude Code worker-only mode: `docs/install-claude-code.md`
+- Codex: `docs/install-codex-gemini.md`
+- Gemini CLI (partial): `docs/install-codex-gemini.md`
 - Shell helper fallback: `docs/install-shell-helper.md`
 - Existing OpenClaw users: `docs/migrate-openclaw.md`
 
@@ -16,6 +17,7 @@ Rules:
 
 - Ask only for the information needed to complete the selected setup.
 - Prefer remote PREQ `/mcp` with OAuth over shell helper mode.
+- For Claude Code, prefer the plugin install path unless the user explicitly wants worker-only mode without plugin helpers.
 - For Claude plugin or Claude dispatch setup, treat `~/.preqstation-dispatch/projects.json` as the canonical local project mapping store.
 - Do not store project path mappings inside this repository, `.claude-plugin`, or `.claude/settings.local.json`.
 - Do not claim that Claude dispatch has already migrated into this repository.

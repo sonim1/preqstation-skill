@@ -2,7 +2,7 @@
 
 Use this path when you want to test the local Claude dispatch channel that lives in this repository.
 
-This runtime requires a local `node` binary on PATH because the bundled server is launched with `node`.
+This runtime requires Node 18+ on PATH because the bundled server is launched with `node`.
 
 This runtime is Claude Code only. Codex and Gemini CLI do not run the local Claude channel server.
 The Claude dispatcher can still launch queued tasks whose requested engine is `codex` or `gemini-cli`.

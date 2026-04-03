@@ -2,6 +2,8 @@
 
 Use this only when MCP is unavailable. Prefer MCP tools whenever possible.
 
+This mode assumes you are inside a local checkout of `preqstation-skill`, because the helper script is `scripts/preqstation-api.sh`.
+
 Source `scripts/preqstation-api.sh`, then use these helpers:
 
 | Function | Signature |

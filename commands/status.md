@@ -16,7 +16,8 @@ Current repository responsibilities:
 
 Current support status:
 
-- worker skill + remote PREQ MCP: stable
+- worker skill + remote PREQ MCP: stable for Claude Code and Codex
+- Gemini CLI worker path: partial and depends on Gemini remote MCP support
 - Claude plugin setup helpers: supported for Claude Code
 - Claude dispatch channel: experimental
 - shell helper mode: fallback

@@ -1,13 +1,18 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "description": "PREQSTATION worker skill, Claude Code plugin, and experimental local dispatch runtime",
+  "private": true,
   "type": "module",
   "scripts": {
     "build:dispatch-bundle": "esbuild src/dispatch/preq-dispatch-channel-server.mjs --bundle --platform=node --format=esm --outfile=dist/preq-dispatch-channel-server.mjs",
     "start:dispatch-channel": "node ./src/dispatch/preq-dispatch-channel-server.mjs",
     "sync:skills": "node ./scripts/sync-skill-docs.mjs",
+    "verify:release": "node ./scripts/verify-release.mjs",
     "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.28.0",

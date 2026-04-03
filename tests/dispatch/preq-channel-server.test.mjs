@@ -5,6 +5,7 @@ import {
   createSerializedPollRunner,
   createChannelInstructions,
   describeDispatchChannelError,
+  emitQueuedTaskEvents,
   isCallbackPortInUseError,
   readClaudeConfiguredPreqMcpUrl,
 } from '../../src/dispatch/preq-dispatch-channel-server.mjs';
@@ -85,4 +86,34 @@ test('readClaudeConfiguredPreqMcpUrl falls back to a single discovered project U
   });
 
   assert.equal(configuredUrl, 'https://pm.single.example.com/mcp');
+});
+
+test('emitQueuedTaskEvents removes the current task from inflight when channel notification fails', async () => {
+  const inflightTaskKeys = new Set();
+  const calls = [];
+
+  await assert.rejects(
+    emitQueuedTaskEvents({
+      mcp: {
+        server: {
+          async notification(payload) {
+            calls.push(payload);
+            throw new Error('channel transport failed');
+          },
+        },
+      },
+      tasks: [
+        {
+          task_key: 'PROJ-312',
+          run_state: 'queued',
+          dispatch_target: 'claude-code-channel',
+        },
+      ],
+      inflightTaskKeys,
+    }),
+    /channel transport failed/i,
+  );
+
+  assert.equal(calls.length, 1);
+  assert.deepEqual(Array.from(inflightTaskKeys), []);
 });

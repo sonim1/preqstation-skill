@@ -1,8 +1,9 @@
 # Install the Claude Plugin
 
 Use this path when you want Claude Code to load the PREQSTATION plugin and its helper commands.
+For most Claude Code users, this is the recommended install path.
 
-This plugin requires a local `node` binary on PATH because the bundled dispatch runtime is launched with `node`.
+This plugin requires Node 18+ on PATH because the bundled dispatch runtime is launched with `node`.
 
 Codex and Gemini CLI do not use this plugin surface. They stay on the worker + remote MCP path.
 
@@ -24,6 +25,7 @@ Codex and Gemini CLI do not use this plugin surface. They stay on the worker + r
 - an experimental Claude dispatch channel runtime
 
 `/preqstation:start-dispatch` is a helper that explains the terminal launch command. It is not the runtime entrypoint by itself.
+The plugin already includes the packaged `preqstation` skill for Claude Code, so you do not need a separate `npx skills add ... -a claude-code` install in the normal plugin flow.
 
 ## Marketplace Install
 
@@ -43,7 +45,7 @@ claude plugin update preqstation@preqstation
 claude plugin list
 ```
 
-The GitHub marketplace source currently tracks rolling Git source from `main`.
+The GitHub marketplace source currently tracks rolling Git source from `main`. `claude plugin update` pulls the current repository state from that source.
 
 ## Configure PREQ MCP
 

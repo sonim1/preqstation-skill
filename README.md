@@ -5,7 +5,7 @@ PREQSTATION worker skill, Claude plugin, and local Claude dispatch runtime.
 This repository currently covers four surfaces:
 
 - the core `preqstation` worker skill
-- remote PREQ `/mcp` setup for Claude Code, Codex, and Gemini CLI
+- remote PREQ `/mcp` setup for Claude Code and Codex, plus a partial Gemini CLI path
 - a Claude plugin with setup/status helpers
 - an experimental Claude-only dispatch channel runtime
 
@@ -13,7 +13,8 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 
 ## Support Status
 
-- worker skill + remote PREQ MCP: stable
+- worker skill + remote PREQ MCP: stable for Claude Code and Codex
+- Gemini CLI worker path: partial and depends on Gemini remote MCP support
 - Claude plugin setup helpers: supported for Claude Code
 - Claude dispatch channel: experimental
 - shell helper mode: fallback
@@ -21,9 +22,10 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 
 ## Choose Your Setup
 
-- Claude plugin: [docs/install-claude-plugin.md](docs/install-claude-plugin.md)
-- Claude Code worker: [docs/install-claude-code.md](docs/install-claude-code.md)
-- Codex or Gemini CLI worker: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
+- Claude Code plugin (recommended): [docs/install-claude-plugin.md](docs/install-claude-plugin.md)
+- Claude Code worker-only mode: [docs/install-claude-code.md](docs/install-claude-code.md)
+- Codex: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
+- Gemini CLI (partial): [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
 - Experimental Claude dispatch channel: [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md)
 - Shell helper fallback: [docs/install-shell-helper.md](docs/install-shell-helper.md)
 
@@ -36,7 +38,7 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 
 ## Prerequisites
 
-- Claude plugin and dispatch runtime users need a local `node` binary on PATH
+- Claude plugin and dispatch runtime users need Node 18+ on PATH
 - Claude plugin users still register the remote PREQ MCP server separately
 
 ## MCP Surfaces
@@ -50,18 +52,14 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 
 ### Claude Code
 
-Install the worker skill:
-
-```bash
-npx skills add sonim1/preqstation-skill -g -a claude-code
-```
-
 Install the plugin:
 
 ```bash
 claude plugin marketplace add https://github.com/sonim1/preqstation-skill
 claude plugin install preqstation@preqstation
 ```
+
+The plugin already includes the packaged `preqstation` skill for Claude Code, so you do not need a separate `npx skills add ... -a claude-code` install unless you intentionally want worker-only mode without the plugin helpers.
 
 Register the remote PREQ MCP server:
 
@@ -76,6 +74,8 @@ Then start Claude and run:
 ```
 
 `/preqstation:setup` verifies the `preqstation` MCP connection, fetches projects when `preq_list_projects` is available, lets you choose auto-scan or manual mapping, and saves repo mappings in `~/.preqstation-dispatch/projects.json`.
+
+For worker-only Claude Code mode without the plugin helpers, use [docs/install-claude-code.md](docs/install-claude-code.md).
 
 ### Codex
 
@@ -92,7 +92,7 @@ Codex uses the worker + remote MCP path only. It does not use the Claude plugin 
 npx skills add sonim1/preqstation-skill -g -a gemini-cli
 ```
 
-Gemini CLI uses the worker + remote MCP path only.
+Gemini CLI support is partial. Use it only if your Gemini environment already supports remote PREQ MCP, otherwise fall back to the shell helper path.
 
 ## Canonical Claude Commands
 

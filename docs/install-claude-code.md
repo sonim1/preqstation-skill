@@ -1,6 +1,7 @@
-# Install for Claude Code
+# Install for Claude Code (Worker-Only Mode)
 
-Use this path when Claude Code is the worker that will execute PREQ tasks.
+Use this path only when you want Claude Code to run the `preqstation` worker skill without the Claude plugin helpers.
+Most Claude Code users should use [install-claude-plugin.md](install-claude-plugin.md) instead.
 
 ## 1. Install the skill
 
@@ -40,6 +41,6 @@ You should be able to:
 ## Notes
 
 - Prefer MCP mode over shell helper mode.
-- This repository is the worker-side setup for Claude Code today.
-- If you want to load this repository as a local Claude plugin, see [docs/install-claude-plugin.md](install-claude-plugin.md).
+- This path does not include `/preqstation:setup`, `/preqstation:status`, or the experimental Claude dispatch runtime.
+- If you want the recommended Claude Code plugin experience, use [install-claude-plugin.md](install-claude-plugin.md).
 - The Claude Channels dispatcher migration into this repository is planned, but not yet the default production path.

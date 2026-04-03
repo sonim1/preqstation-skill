@@ -26,7 +26,7 @@ import {
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
 
-const PREQ_CHANNEL_SERVER_VERSION = '0.1.25';
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.26';
 const DEFAULT_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 
 function readPollIntervalMs() {
@@ -204,10 +204,15 @@ export async function emitQueuedTaskEvents({
   for (const task of queuedTasks) {
     const taskKey = task.task_key || task.taskKey || task.id;
     inflightTaskKeys.add(taskKey);
-    await mcp.server.notification({
-      method: 'notifications/claude/channel',
-      params: buildQueuedTaskChannelEvent(task),
-    });
+    try {
+      await mcp.server.notification({
+        method: 'notifications/claude/channel',
+        params: buildQueuedTaskChannelEvent(task),
+      });
+    } catch (error) {
+      inflightTaskKeys.delete(taskKey);
+      throw error;
+    }
   }
 
   return queuedTasks.length;
