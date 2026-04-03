@@ -1,49 +1,46 @@
 # Install the Experimental Dispatch Channel
 
-Use this path when you want to test the local Claude dispatch channel that now lives in this repository.
+Use this path when you want to test the local Claude dispatch channel that lives in this repository.
 
-This path is for Claude Code only. Codex and Gemini CLI do not use this local channel runtime.
+This runtime requires a local `node` binary on PATH because the bundled server is launched with `node`.
 
-This is an experimental migration path. The current production OpenClaw dispatcher still lives in `preqstation-openclaw`.
+This runtime is Claude Code only. Codex and Gemini CLI do not run the local Claude channel server.
+The Claude dispatcher can still launch queued tasks whose requested engine is `codex` or `gemini-cli`.
 
-You can run this channel in two ways:
+Current status:
 
-- plugin-install mode with `claude plugin marketplace add https://github.com/sonim1/preqstation-skill` then `claude plugin install preqstation`
-- development mode from the repo with `--mcp-config`
+- Claude dispatch channel: experimental
+- OpenClaw production dispatcher: still separate in `preqstation-openclaw`
 
-## 1. Install dependencies
+## MCP Surfaces
 
-```bash
-cd /path/to/preqstation-skill
-npm install
-```
+| Server | Transport | Purpose | Required |
+| --- | --- | --- | --- |
+| `preqstation` | remote HTTP MCP | PREQ task tools and OAuth-backed `/mcp` access | yes |
+| `preq-dispatch-channel` | local stdio MCP | experimental Claude-only dispatch runtime | yes for this flow |
 
-## 2. Configure the PREQ MCP URL
+## Shared Prerequisite: register PREQ MCP
 
-Preferred path:
+Register the remote PREQ MCP server first:
 
 ```bash
 claude mcp add --transport http preqstation https://<your-domain>/mcp
 ```
 
-The dispatch channel will reuse that Claude MCP URL automatically.
+The dispatch runtime tries to reuse Claude's configured PREQ MCP URL automatically.
+That works when it can resolve a project-level or root-level `preqstation` entry from Claude config, or when Claude only has a single discoverable PREQ MCP URL.
+If not, set `PREQSTATION_MCP_URL` explicitly.
 
-Optional override:
+Optional overrides:
 
 ```bash
 export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
-export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
-```
-
-Optional:
-
-```bash
-export PREQ_POLL_INTERVAL_MS="5000"
-export PREQSTATION_OAUTH_CALLBACK_PORT="45451"
 export PREQSTATION_REPO_ROOTS="$HOME/projects:$HOME/work"
 ```
 
-If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or create `~/.preqstation-dispatch/projects.json`:
+Installed plugin mode already provides default poll interval and callback port values from the plugin manifest.
+
+If your repos are not under the default roots, either set `PREQSTATION_REPO_ROOTS` or create `~/.preqstation-dispatch/projects.json` manually:
 
 ```json
 {
@@ -53,59 +50,62 @@ If your repos are not under `~/projects`, either set `PREQSTATION_REPO_ROOTS` or
 }
 ```
 
-With the Claude plugin installed, `/preqstation:setup` should guide this flow, optionally fetch the PREQ project list, ask whether to auto-scan or manually map repos, and persist the final mappings into `~/.preqstation-dispatch/projects.json`.
+If the plugin is installed, `/preqstation:setup` can manage this mapping file for you.
 
-The slash commands are optional helpers. The dispatch runtime itself is started from the terminal commands below.
+## Installed Plugin Mode
 
-## 3. Start Claude Code with the local channel
-
-### Option A: direct repo development mode
+Install the plugin first:
 
 ```bash
-claude --mcp-config /path/to/preqstation-skill/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
+claude plugin marketplace add https://github.com/sonim1/preqstation-skill
+claude plugin install preqstation@preqstation
 ```
 
-`mcp-dev.json` uses `${PREQSTATION_SKILL_ROOT}` for the server entrypoint so the config does not depend on your current working directory.
-
-### Option B: installed plugin mode
-
-If you want to test the same install surface as `/plugin install`, first follow [install-claude-plugin.md](install-claude-plugin.md) to install `preqstation`, then start Claude with:
+Then start the dispatcher session:
 
 ```bash
 claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
-The plugin now uses its own bundled MCP config, so this command should work from the repo root without colliding with direct bare-server testing. During the current research preview, do not add `--channels plugin:preqstation@preqstation` here. The official Claude docs say the development bypass does not carry over to `--channels` entries.
-
-If you need to confirm emit and consume behavior in plugin mode, add a debug log file:
+Debug mode:
 
 ```bash
 claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
 tail -f /tmp/preqstation-dispatch-debug.log
 ```
 
-## 4. Complete OAuth
+During the current Claude Channels research preview, do not add `--channels plugin:preqstation@preqstation` here.
 
-The first real PREQ MCP connection will open the normal browser OAuth flow.
+If URL discovery fails, launch with an explicit override:
 
-## 5. Verify
+```bash
+PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+```
 
-You should be able to:
+For contributor-only repo development mode, keep the `mcp-dev.json` flow in [../CONTRIBUTING.md](../CONTRIBUTING.md) rather than this user guide.
 
-- run `claude mcp list` and see `preq-dispatch-channel`
-- see queued-task poll logs in the Claude terminal
-- receive emitted channel events for PREQ tasks where `run_state=queued` and `dispatch_target=claude-code-channel`
-- see Claude call the built-in `dispatch_task` tool when those events arrive in a Claude dispatch session
-- when using plugin-install mode, verify `claude plugin list` includes `preqstation@preqstation`
+## OAuth
 
-## Current scope
+The first real PREQ request opens the PREQ OAuth flow in the browser.
 
-This runtime currently does these things:
+The dispatch runtime keeps its own OAuth cache in `~/.preqstation-dispatch/oauth.json`.
 
-- connects to PREQ `/mcp` with OAuth
-- calls `preq_list_tasks` across `claude-code`, `codex`, and `gemini-cli`
-- filters queued Claude Code dispatch tasks by `run_state=queued` and `dispatch_target=claude-code-channel`
-- emits Claude channel events into the current dispatcher session
-- exposes a `dispatch_task` tool so the Claude dispatcher session can create an isolated worktree and launch the requested engine as a child process
+## Verify
 
-It does not yet replace the full production OpenClaw runtime by itself.
+When the dispatch runtime is healthy:
+
+- `claude mcp list` shows the configured PREQ MCP server
+- the Claude dispatcher session connects to PREQ `/mcp`
+- queued tasks with `run_state=queued` and `dispatch_target=claude-code-channel` are emitted into the dispatcher session
+- Claude calls the built-in `dispatch_task` tool when those events arrive
+
+## Current Scope
+
+This runtime currently does all of the following:
+
+- connects to PREQ `/mcp` over OAuth
+- polls queued PREQ dispatch tasks targeting the Claude dispatch channel
+- emits channel events into the active Claude dispatcher session
+- exposes `dispatch_task` so Claude can create an isolated worktree and launch the requested engine
+
+It does not replace the full production OpenClaw dispatcher yet.

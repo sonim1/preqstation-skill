@@ -1,11 +1,12 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.24",
-  "description": "PREQSTATION local agent package with worker skill docs and a local Claude plugin skeleton",
+  "version": "0.1.25",
+  "description": "PREQSTATION worker skill, Claude Code plugin, and experimental local dispatch runtime",
   "type": "module",
   "scripts": {
     "build:dispatch-bundle": "esbuild src/dispatch/preq-dispatch-channel-server.mjs --bundle --platform=node --format=esm --outfile=dist/preq-dispatch-channel-server.mjs",
     "start:dispatch-channel": "node ./src/dispatch/preq-dispatch-channel-server.mjs",
+    "sync:skills": "node ./scripts/sync-skill-docs.mjs",
     "test": "node --test"
   },
   "dependencies": {

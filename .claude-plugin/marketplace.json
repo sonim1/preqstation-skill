@@ -1,5 +1,8 @@
 {
   "name": "preqstation",
+  "metadata": {
+    "description": "PREQSTATION Claude Code plugins and local dispatch tooling."
+  },
   "owner": {
     "name": "PREQSTATION"
   },
@@ -7,7 +10,7 @@
     {
       "name": "preqstation",
       "source": "./",
-      "description": "PREQSTATION worker skill and Claude dispatch plugin for PREQ task execution."
+      "description": "PREQSTATION Claude Code helper plugin and experimental local dispatch tooling."
     }
   ]
 }

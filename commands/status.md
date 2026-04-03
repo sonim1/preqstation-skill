@@ -11,8 +11,16 @@ Current repository responsibilities:
 - worker-side PREQ skill instructions
 - remote PREQ `/mcp` setup guidance
 - shell helper fallback
-- local Claude plugin for `--plugin-dir` or marketplace installs
+- Claude plugin setup helpers and marketplace install path
 - experimental local Claude dispatch channel runtime
+
+Current support status:
+
+- worker skill + remote PREQ MCP: stable
+- Claude plugin setup helpers: supported for Claude Code
+- Claude dispatch channel: experimental
+- shell helper mode: fallback
+- OpenClaw migration docs: legacy
 
 Still planned, not fully migrated here yet:
 

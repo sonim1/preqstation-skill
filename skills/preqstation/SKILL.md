@@ -7,8 +7,7 @@ description: >
   Tasks carry an `engine` field (`claude-code` | `codex` | `gemini-cli`) indicating which AI agent should execute them.
 ---
 
-This is the plugin-packaged copy of the agent-side lifecycle skill.
-The production OpenClaw dispatcher migration into this repository is still in progress, so the OpenClaw launcher skill remains separate for now.
+This is the agent-side lifecycle skill. The OpenClaw launcher skill is separate and should be named `preqstation-dispatch`.
 
 ## Environment
 
@@ -62,9 +61,9 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
 | `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
-| `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves -> `ready` and clears `run_state` |
-| `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves -> `done` and clears `run_state`  |
-| `preq_block_task`           | Record `engine` reporting the block, send lifecycle action `block`; backend moves -> `hold` and clears `run_state`    |
+| `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
+| `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state`  |
+| `preq_block_task`           | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state`    |
 | `preq_delete_task`          | Permanently delete a task by ticket number or UUID                                                                   |
 
 This gives deterministic task-id based execution and result upload.

@@ -1,109 +1,109 @@
-# Install as a Local Claude Plugin
+# Install the Claude Plugin
 
-Use this path when you want Claude Code to load this repository as a local plugin.
+Use this path when you want Claude Code to load the PREQSTATION plugin and its helper commands.
 
-Do not use this path for Codex or Gemini CLI. Their PREQ setup stays on the worker + remote MCP path only.
+This plugin requires a local `node` binary on PATH because the bundled dispatch runtime is launched with `node`.
 
-## What this gives you today
+Codex and Gemini CLI do not use this plugin surface. They stay on the worker + remote MCP path.
+
+## MCP Surfaces
+
+| Server | Transport | Purpose | Required |
+| --- | --- | --- | --- |
+| `preqstation` | remote HTTP MCP | PREQ task tools and OAuth-backed `/mcp` access | yes |
+| `preq-dispatch-channel` | local stdio MCP | experimental Claude-only dispatch runtime bundled by this plugin | optional |
+
+## What the plugin provides
 
 - plugin metadata through `.claude-plugin/plugin.json`
-- the `preqstation` worker skill under `skills/preqstation/SKILL.md`
-- helper commands under `commands/`
+- the packaged `preqstation` worker skill
+- helper commands:
+  - `/preqstation:setup`
+  - `/preqstation:status`
+  - `/preqstation:start-dispatch`
+- an experimental Claude dispatch channel runtime
 
-This is currently a local Claude plugin for development, marketplace-style installs, and early dispatch testing.
+`/preqstation:start-dispatch` is a helper that explains the terminal launch command. It is not the runtime entrypoint by itself.
 
-You have two valid local test modes:
+## Marketplace Install
 
-- preferred install path: GitHub marketplace source + `claude plugin install preqstation`
-- fastest development loop: `claude --plugin-dir /path/to/preqstation-skill`
-
-## 1. Preferred install path: install from the GitHub repository
+This is the canonical end-user path.
 
 ```bash
 claude plugin marketplace add https://github.com/sonim1/preqstation-skill
-claude plugin install preqstation
+claude plugin install preqstation@preqstation
 claude plugin list
 ```
 
-If you need to be explicit about the marketplace name, use:
+To update an existing install:
 
 ```bash
-claude plugin install preqstation@preqstation
+claude plugin marketplace update preqstation
+claude plugin update preqstation@preqstation
+claude plugin list
 ```
 
-## 2. Development path: load the plugin from the repository
+The GitHub marketplace source currently tracks rolling Git source from `main`.
 
-Use this while iterating on local changes before you push them:
+## Configure PREQ MCP
 
-```bash
-cd /path/to/preqstation-skill
-claude --plugin-dir /path/to/preqstation-skill
-```
-
-## 3. Use plugin-provided commands
-
-After Claude Code starts with the plugin loaded, you can use:
-
-- `/preqstation:setup`
-- `/preqstation:status`
-- `/preqstation:start-dispatch`
-
-`/preqstation:setup` should verify PREQ MCP connectivity and manage local project mappings in `~/.preqstation-dispatch/projects.json`.
-
-`/preqstation:start-dispatch` remains available as a helper, but the actual dispatch runtime is easier to start directly from the terminal.
-
-## 4. Configure PREQ MCP access
-
-The plugin does not replace PREQ MCP setup.
-You should still register the remote PREQ MCP endpoint:
+The plugin does not replace PREQ MCP registration. Add the remote MCP server separately:
 
 ```bash
 claude mcp add --transport http preqstation https://<your-domain>/mcp
 ```
 
-Then complete the browser OAuth flow on first real use.
+Claude starts OAuth on the first real PREQ request.
 
-## 5. Channels note
+## Run Setup
 
-The plugin can also be used as a Claude Channels source during local testing.
+After the plugin is installed, start Claude and run:
 
-When testing a locally installed marketplace plugin, use:
+```text
+/preqstation:setup
+```
+
+This command:
+
+- verifies the `preqstation` MCP connection
+- fetches PREQ projects when `preq_list_projects` is available
+- offers auto-scan or manual repo mapping
+- saves project mappings in `~/.preqstation-dispatch/projects.json`
+
+## Experimental Dispatch Runtime
+
+The plugin includes an experimental Claude-only dispatch runtime.
+
+Start it with:
 
 ```bash
 claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
 ```
 
-If Claude does not already have the remote PREQ MCP server configured, register it first with:
-
-```bash
-claude mcp add --transport http preqstation https://<your-domain>/mcp
-```
-
-The plugin now ships its own bundled MCP config, separate from the repo's direct development config. That means plugin testing and bare-server testing no longer need to share the same root `.mcp.json`.
-
-During the research preview, the development-flag bypass is per entry. Claude's channels docs explicitly note that combining this flag with `--channels` does not extend the bypass to the `--channels` entry, so do not add `--channels plugin:preqstation@preqstation` while testing this plugin locally.
-
-If you want to see whether the installed plugin actually emitted and consumed a queued task, run the dispatcher session with a debug log:
+For debug logging:
 
 ```bash
 claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
-```
-
-Then inspect:
-
-```bash
 tail -f /tmp/preqstation-dispatch-debug.log
 ```
 
-## Current limitation
+During the current Claude Channels research preview, do not add `--channels plugin:preqstation@preqstation` to that command.
 
-This plugin now includes the experimental Claude dispatch runtime, but it still does not replace every production behavior from `preqstation-openclaw`.
+If the dispatcher cannot discover the PREQ MCP URL from Claude config, provide it explicitly:
 
-Today it is useful for:
+```bash
+PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+```
 
-- local plugin development
-- local plugin discovery through `--plugin-dir`
+For deeper dispatch details, use [install-dispatch-channel.md](install-dispatch-channel.md).
+If you are developing this repository itself, keep local `--plugin-dir` and repo-driven workflows in [../CONTRIBUTING.md](../CONTRIBUTING.md) instead of this end-user guide.
+
+## Current Scope
+
+Today this plugin is the right surface for:
+
+- Claude Code setup helpers
 - packaging the worker-side `preqstation` skill for Claude Code
-- hosting the experimental local dispatch channel runtime, launcher tool, and docs
+- local testing of the experimental Claude dispatch channel runtime
 
-For the current production OpenClaw dispatcher path, see [docs/migrate-openclaw.md](migrate-openclaw.md).
+It does not replace the current production OpenClaw dispatcher. For that migration status, see [migrate-openclaw.md](migrate-openclaw.md).
