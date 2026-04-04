@@ -1,6 +1,6 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "description": "PREQSTATION worker skill, Claude Code plugin, and experimental local dispatch runtime",
   "private": true,
   "type": "module",
