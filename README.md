@@ -9,7 +9,7 @@ This repository currently covers four surfaces:
 - a Claude plugin with setup/status helpers
 - an experimental Claude-only dispatch channel runtime
 
-For existing OpenClaw users, the current production dispatcher still lives in `preqstation-openclaw`. Keep using that path until the migration guide says otherwise: [docs/migrate-openclaw.md](docs/migrate-openclaw.md).
+For existing OpenClaw users, the current production dispatcher still lives in `preqstation-openclaw`. Keep using that path until the migration guide says otherwise: [docs/migrate-openclaw.md](docs/migrate-openclaw.md). That guide also documents how OpenClaw dispatch and Claude Code dispatch compare after work completes.
 
 ## Support Status
 
