@@ -13,6 +13,7 @@ Current repository responsibilities:
 - shell helper fallback
 - Claude plugin setup helpers and marketplace install path
 - experimental local Claude dispatch channel runtime
+- the `Hand off test` flow for branch-scoped worktree handoff
 
 Current support status:
 
@@ -31,6 +32,7 @@ When relevant, point the user to:
 
 - `README.md`
 - `docs/install-claude-plugin.md`
-- `commands/start-dispatch.md`
+- `commands/help.md`
+- `commands/update.md`
 - `docs/install-claude-code.md`
 - `docs/migrate-openclaw.md`

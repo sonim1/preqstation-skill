@@ -2,6 +2,8 @@
 
 Use this path when you want to test the local Claude dispatch channel that lives in this repository.
 
+In this repository, a `Hand off test` means the dispatcher creates or reuses an auxiliary worktree on the requested branch, links local runtime env files into that worktree when needed, and hands the task off to the requested engine there.
+
 This runtime requires Node 18+ on PATH because the bundled server is launched with `node`.
 
 This runtime is Claude Code only. Codex and Gemini CLI do not run the local Claude channel server.
@@ -61,7 +63,7 @@ claude plugin marketplace add https://github.com/sonim1/preqstation-skill
 claude plugin install preqstation@preqstation
 ```
 
-Then start the dispatcher session:
+Then start the dispatcher session for a Hand off test:
 
 ```bash
 claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
@@ -92,12 +94,12 @@ The dispatch runtime keeps its own OAuth cache in `~/.preqstation-dispatch/oauth
 
 ## Verify
 
-When the dispatch runtime is healthy:
+When the dispatch runtime is healthy for a Hand off test:
 
 - `claude mcp list` shows the configured PREQ MCP server
 - the Claude dispatcher session connects to PREQ `/mcp`
 - queued tasks with `run_state=queued` and `dispatch_target=claude-code-channel` are emitted into the dispatcher session
-- Claude calls the built-in `dispatch_task` tool when those events arrive
+- Claude calls the built-in `dispatch_task` tool when those events arrive and prepares the branch-scoped worktree handoff
 
 ## Current Scope
 
@@ -106,6 +108,6 @@ This runtime currently does all of the following:
 - connects to PREQ `/mcp` over OAuth
 - polls queued PREQ dispatch tasks targeting the Claude dispatch channel
 - emits channel events into the active Claude dispatcher session
-- exposes `dispatch_task` so Claude can create an isolated worktree and launch the requested engine
+- exposes `dispatch_task` so Claude can run a Hand off test by creating an isolated worktree and launching the requested engine
 
 It does not replace the full production OpenClaw dispatcher yet.

@@ -21,10 +21,10 @@ Codex and Gemini CLI do not use this plugin surface. They stay on the worker + r
 - helper commands:
   - `/preqstation:setup`
   - `/preqstation:status`
-  - `/preqstation:start-dispatch`
+  - `/preqstation:update`
+  - `/preqstation:help`
 - an experimental Claude dispatch channel runtime
 
-`/preqstation:start-dispatch` is a helper that explains the terminal launch command. It is not the runtime entrypoint by itself.
 The plugin already includes the packaged `preqstation` skill for Claude Code, so you do not need a separate `npx skills add ... -a claude-code` install in the normal plugin flow.
 
 ## Marketplace Install
@@ -46,6 +46,12 @@ claude plugin list
 ```
 
 The GitHub marketplace source currently tracks rolling Git source from `main`. `claude plugin update` pulls the current repository state from that source.
+
+If you want the plugin to remind you of these commands from inside Claude, run:
+
+```text
+/preqstation:update
+```
 
 ## Configure PREQ MCP
 
@@ -71,6 +77,12 @@ This command:
 - fetches PREQ projects when `preq_list_projects` is available
 - offers auto-scan or manual repo mapping
 - saves project mappings in `~/.preqstation-dispatch/projects.json`
+
+For a quick overview of the available PREQSTATION paths and commands inside Claude, run:
+
+```text
+/preqstation:help
+```
 
 ## Experimental Dispatch Runtime
 

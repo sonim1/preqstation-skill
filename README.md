@@ -7,7 +7,7 @@ This repository currently covers four surfaces:
 - the core `preqstation` worker skill
 - remote PREQ `/mcp` setup for Claude Code and Codex, plus a partial Gemini CLI path
 - a Claude plugin with setup/status helpers
-- an experimental Claude-only dispatch channel runtime
+- an experimental Claude-only dispatch channel runtime for Hand off tests
 
 For existing OpenClaw users, the current production dispatcher still lives in `preqstation-openclaw`. Keep using that path until the migration guide says otherwise: [docs/migrate-openclaw.md](docs/migrate-openclaw.md). That guide also documents how OpenClaw dispatch and Claude Code dispatch compare after work completes.
 
@@ -19,6 +19,8 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 - Claude dispatch channel: experimental
 - shell helper mode: fallback
 - OpenClaw migration docs: legacy
+
+In this repository, a `Hand off test` means PREQ prepares an isolated auxiliary worktree on the requested branch and hands execution off to the target engine inside that worktree.
 
 ## Choose Your Setup
 
@@ -75,6 +77,12 @@ Then start Claude and run:
 
 `/preqstation:setup` verifies the `preqstation` MCP connection, fetches projects when `preq_list_projects` is available, lets you choose auto-scan or manual mapping, and saves repo mappings in `~/.preqstation-dispatch/projects.json`.
 
+Useful plugin helper commands:
+
+- `/preqstation:setup` to configure or refresh project path mappings
+- `/preqstation:update` to see the current plugin update command
+- `/preqstation:help` to see the available Claude plugin, dispatch, worker-only, and OpenClaw paths
+
 For worker-only Claude Code mode without the plugin helpers, use [docs/install-claude-code.md](docs/install-claude-code.md).
 
 ### Codex
@@ -110,7 +118,7 @@ claude plugin marketplace update preqstation
 claude plugin update preqstation@preqstation
 ```
 
-Start the experimental Claude dispatch runtime:
+Start the experimental Claude dispatch runtime for a Hand off test:
 
 ```bash
 claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation

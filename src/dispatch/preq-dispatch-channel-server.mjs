@@ -26,7 +26,7 @@ import {
   resolvePreqMcpUrl,
 } from '../preq/preq-mcp-client.mjs';
 
-const PREQ_CHANNEL_SERVER_VERSION = '0.1.27';
+const PREQ_CHANNEL_SERVER_VERSION = '0.1.28';
 const DEFAULT_CLAUDE_CONFIG_PATH = path.join(os.homedir(), '.claude.json');
 
 function readPollIntervalMs() {
