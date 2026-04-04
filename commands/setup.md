@@ -1,47 +1,55 @@
 ---
-description: "Help install PREQSTATION for the current runtime"
+description: "Configure PREQSTATION project path mappings for the current environment"
 ---
 
-Help the user set up PREQSTATION in the current environment.
+Help the user configure local PREQ project path mappings in the current environment.
 
-Use the matching documentation path:
-
-- Claude Code plugin (recommended): `docs/install-claude-plugin.md`
-- Claude Code worker-only mode: `docs/install-claude-code.md`
-- Codex: `docs/install-codex-gemini.md`
-- Gemini CLI (partial): `docs/install-codex-gemini.md`
-- Shell helper fallback: `docs/install-shell-helper.md`
-- Existing OpenClaw users: `docs/migrate-openclaw.md`
+Default to local project path mapping.
+Do not start by asking the user to choose between setup paths when they run `/preqstation:setup` with no extra qualifier or when they ask for path setup.
 
 Rules:
 
-- Ask only for the information needed to complete the selected setup.
+- Treat `/preqstation:setup` as the path-mapping entrypoint for the current runtime, not a generic installation chooser.
+- Ask only for the information needed to complete project mapping in the current environment.
 - Prefer remote PREQ `/mcp` with OAuth over shell helper mode.
 - For Claude Code, prefer the plugin install path unless the user explicitly wants worker-only mode without plugin helpers.
 - For Claude plugin or Claude dispatch setup, treat `~/.preqstation-dispatch/projects.json` as the canonical local project mapping store.
 - Do not store project path mappings inside this repository, `.claude-plugin`, or `.claude/settings.local.json`.
 - Do not claim that Claude dispatch has already migrated into this repository.
 - If the user wants the current production OpenClaw dispatcher, direct them to the migration guidance and explain that `preqstation-openclaw` is still the active dispatcher today.
+- Only redirect into other install docs when the user explicitly asks for installation help or when required prerequisites are clearly missing.
+- Even if mappings already exist, allow the user to refresh or replace them. Treat `/preqstation:setup` as rerunnable update flow, not one-time bootstrap.
 
-If the user wants Claude plugin setup for local dispatch work:
+Default flow:
 
-1. Confirm or configure the Claude `preqstation` MCP server first.
-   - Preferred path: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
-   - Reuse an existing Claude MCP config when already present.
-2. Explain where local project mappings are stored:
+1. Assume the user wants to configure local repo paths for PREQ projects in this environment.
+2. Confirm or configure the runtime MCP prerequisite only if needed.
+   - Claude preferred path: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
+   - Reuse an existing MCP config when already present.
+3. Explain where local project mappings are stored:
    - `~/.preqstation-dispatch/projects.json`
    - JSON shape: `{ "projects": { "PROJ": "/absolute/path/to/repo" } }`
-3. Prefer fetching PREQ projects with `preq_list_projects`.
-4. Ask the user which mapping mode they want:
+4. Prefer fetching PREQ projects with `preq_list_projects`.
+5. If existing mappings are present, show the current saved paths briefly and ask whether to rescan, replace selected entries, or keep the unchanged ones.
+6. Ask only about mapping mode:
    - auto scan local repos by `repoUrl`
    - manually choose paths per project
-5. In auto-scan mode:
+7. In auto-scan mode:
    - inspect local repos under `PREQSTATION_REPO_ROOTS` when set
    - otherwise default to `~/projects`
    - match local git remotes against PREQ project `repoUrl`
+   - update existing matches when they changed, not only missing ones
    - save successful matches and ask only about any unmatched projects
-6. In manual mode:
+8. In manual mode:
    - list PREQ projects
    - collect absolute local repo paths only for the projects the user wants mapped
-   - save them into `~/.preqstation-dispatch/projects.json`
-7. If `preq_list_projects` is unavailable, explain that the connected PREQ service is missing project-list support and fall back to manual project-key mapping only if the user still wants to continue.
+   - overwrite or refresh the chosen entries in `~/.preqstation-dispatch/projects.json`
+9. If `preq_list_projects` is unavailable, explain that the connected PREQ service is missing project-list support and fall back to manual project-key mapping only if the user still wants to continue.
+
+Explicit install-help redirects:
+
+- Claude Code plugin install: `docs/install-claude-plugin.md`
+- Claude Code worker-only install: `docs/install-claude-code.md`
+- Codex or Gemini worker install: `docs/install-codex-gemini.md`
+- Shell helper fallback: `docs/install-shell-helper.md`
+- OpenClaw migration: `docs/migrate-openclaw.md`
