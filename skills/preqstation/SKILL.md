@@ -14,11 +14,12 @@ This is the agent-side lifecycle skill. The OpenClaw launcher skill is separate 
 Recommended MCP mode:
 
 - Register the remote MCP endpoint from the PREQSTATION `projects-manager` service:
-  - Claude Code: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
+  - Claude Code: `claude mcp add -s user --transport http preqstation https://<your-domain>/mcp`
   - Codex: `codex mcp add preqstation --url https://<your-domain>/mcp`
 - OAuth starts when the client first makes a real request to `/mcp`
 - Codex often triggers login during `add` because it probes the server immediately
 - Claude Code usually stores the config first and may show `Needs authentication` until first use or `claude mcp get preqstation`
+- Prefer one user-scoped Claude Code PREQ registration so you do not accumulate duplicate project-local entries
 - Complete the browser login flow when prompted by the client
 
 Optional shell helper mode:
@@ -60,6 +61,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
 | `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
+| `preq_update_task_note`     | Record `engine` while replacing the task note markdown without changing workflow status                              |
 | `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
 | `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
 | `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state`  |
@@ -96,6 +98,12 @@ Load -> Initialize -> Execute -> Finalize
   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, or run tests, build, lint, or other verification commands.
   - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
+- Else If user objective start with `ask`:
+  - Rewrite the existing task note only. Do not implement product changes, run tests, or change workflow status.
+  - Treat the current task note plus any temporary trailing `Ask:` helper block as the source material for the rewrite.
+  - Persist the rewritten markdown with `preq_update_task_note`.
+  - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
+  - The final saved note must not include the temporary `Ask:` helper block.
 - Else If user objective start with `qa`:
   - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
   - Resolve `qa_run_id` from `.preqstation-prompt.txt` and use `preq_update_qa_run` to mark the run `running` as soon as the local target URL is known.
@@ -120,7 +128,8 @@ On any failure in an active task branch, call `preq_block_task` with the blockin
 On any failure in a QA branch, update the QA run to `failed` with a concise markdown report and stop.
 
 4. Finalize:
-   On success for task branches, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+   On success for implementation/review branches, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
+   On success for ask branches, do not call `preq_complete_task`; the successful note rewrite ends after `preq_update_task_note` plus `preq_update_task_status` using the unchanged workflow status.
 
 ## Deployment Strategy Contract (required)
 

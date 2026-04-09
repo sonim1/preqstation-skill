@@ -366,11 +366,13 @@ export function renderDispatchPrompt({
     `7) Do not ask the user to paste the task card text or preq_get_task output when preq_get_task("${taskKey}") is available. Ask only if the tool call itself fails or PREQ tools are unavailable.`,
     '8) Use the preqstation lifecycle skill as the single source of truth for PREQ task rules, status transitions, deploy handling, and preq_* tool usage.',
     '9) If User Objective starts with plan, do not run tests, build, lint, or other verification commands. Read local code only enough to produce the plan and stop after preq_plan_task.',
-    '10) If User Objective starts with qa, Task ID may be N/A. In that branch, use QA Run ID as the external reporting handle, update it through the PREQSTATION skill, and do not invent a task lifecycle transition.',
-    '11) If User Objective starts with qa and QA Task Keys is present, call preq_get_task for each listed task key before browser testing. Treat those tasks as the QA scope and keep QA limited to that scope.',
-    '12) If the current agent has access to the dogfood skill, use it as the default QA workflow for browser testing and report generation.',
-    '13) If ./.preqstation-prompt.txt is missing in the current workspace, stop and report a dispatch failure instead of improvising from another directory.',
-    `14) Worktree cleanup after all work:\n    git -C ${projectPath || '<project_cwd>'} worktree remove ${worktreePath || '<cwd>'} --force\n    git -C ${projectPath || '<project_cwd>'} worktree prune`,
+    '10) If User Objective starts with ask, rewrite the task note only, keep the workflow status unchanged, persist the final markdown with preq_update_task_note, and clear run_state by calling preq_update_task_status with the current workflow status from preq_get_task.',
+    '11) If User Objective starts with ask, exclude any temporary trailing Ask: helper block from the final saved note and treat it only as optional rewrite guidance.',
+    '12) If User Objective starts with qa, Task ID may be N/A. In that branch, use QA Run ID as the external reporting handle, update it through the PREQSTATION skill, and do not invent a task lifecycle transition.',
+    '13) If User Objective starts with qa and QA Task Keys is present, call preq_get_task for each listed task key before browser testing. Treat those tasks as the QA scope and keep QA limited to that scope.',
+    '14) If the current agent has access to the dogfood skill, use it as the default QA workflow for browser testing and report generation.',
+    '15) If ./.preqstation-prompt.txt is missing in the current workspace, stop and report a dispatch failure instead of improvising from another directory.',
+    `16) Worktree cleanup after all work:\n    git -C ${projectPath || '<project_cwd>'} worktree remove ${worktreePath || '<cwd>'} --force\n    git -C ${projectPath || '<project_cwd>'} worktree prune`,
   ].join('\n');
 }
 
@@ -403,6 +405,7 @@ export function buildEngineLaunchSpec(engine, options = {}) {
     'Treat that file as the source of truth.',
     'If that file is missing, stop immediately.',
     'If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work.',
+    'If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status.',
     'If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
   ].join(' ');
 

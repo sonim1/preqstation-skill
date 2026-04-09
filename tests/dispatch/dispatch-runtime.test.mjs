@@ -82,7 +82,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
       '/tmp/preqstation-mcp.json',
       '--dangerously-skip-permissions',
       '-p',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
@@ -92,7 +92,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
     args: [
       'exec',
       '--dangerously-bypass-approvals-and-sandbox',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
@@ -117,6 +117,24 @@ test('renderDispatchPrompt matches the shared PREQ dispatch contract', () => {
   assert.match(prompt, /call preq_start_task\("PROJ-295", "claude-code"\) immediately/);
   assert.match(prompt, /If User Objective starts with plan, do not run tests, build, lint/);
   assert.match(prompt, /git -C \/Users\/example\/projects\/proj worktree remove \/tmp\/preqstation-dispatch-worktrees\/PROJ\/task-proj-295-mobile-view-skeleton --force/);
+});
+
+test('renderDispatchPrompt includes ask-specific note rewrite rules', () => {
+  const prompt = renderDispatchPrompt({
+    taskKey: 'PROJ-328',
+    projectKey: 'PROJ',
+    branchName: 'task/proj-328/edit-task-isyu',
+    engine: 'codex',
+    objective: 'ask',
+    worktreePath: '/tmp/preqstation-dispatch-worktrees/PROJ/task-proj-328-edit-task-isyu',
+    projectPath: '/Users/example/projects/proj',
+  });
+
+  assert.match(prompt, /User Objective: ask/);
+  assert.match(prompt, /rewrite the task note only/);
+  assert.match(prompt, /preq_update_task_note/);
+  assert.match(prompt, /preq_update_task_status/);
+  assert.match(prompt, /workflow status unchanged/);
 });
 
 test('writeClaudeChildMcpConfig writes a project-local PREQ MCP config', async () => {
