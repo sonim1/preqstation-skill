@@ -53,6 +53,16 @@ export function readProjectsFromPreqListProjectsResult(result) {
   return Array.isArray(payload?.projects) ? payload.projects : [];
 }
 
+export function readDispatchRequestsFromPreqListDispatchRequestsResult(result) {
+  const payload = readJsonFromToolResult(result);
+  return Array.isArray(payload?.requests) ? payload.requests : [];
+}
+
+export function readDispatchRequestFromPreqUpdateDispatchRequestResult(result) {
+  const payload = readJsonFromToolResult(result);
+  return payload?.request || payload || null;
+}
+
 export function readTaskFromPreqGetTaskResult(result) {
   const payload = readJsonFromToolResult(result);
   return payload?.task || payload || null;
@@ -107,6 +117,40 @@ export async function fetchProjectsViaMcp({
   });
 
   return readProjectsFromPreqListProjectsResult(result);
+}
+
+export async function fetchDispatchRequestsViaMcp({
+  callTool,
+  limit = 200,
+}) {
+  const result = await callTool({
+    name: 'preq_list_dispatch_requests',
+    arguments: {
+      state: 'queued',
+      dispatchTarget: 'claude-code-channel',
+      limit,
+    },
+  });
+
+  return readDispatchRequestsFromPreqListDispatchRequestsResult(result);
+}
+
+export async function updateDispatchRequestViaMcp({
+  callTool,
+  requestId,
+  state,
+  errorMessage,
+}) {
+  const result = await callTool({
+    name: 'preq_update_dispatch_request',
+    arguments: {
+      requestId,
+      state,
+      ...(errorMessage ? { errorMessage } : {}),
+    },
+  });
+
+  return readDispatchRequestFromPreqUpdateDispatchRequestResult(result);
 }
 
 async function connectClientWithOAuth({
@@ -243,6 +287,17 @@ export function createPreqMcpTaskClient({
     },
     listDispatchTasks() {
       return fetchDispatchTasksViaMcp({ callTool });
+    },
+    listDispatchRequests() {
+      return fetchDispatchRequestsViaMcp({ callTool });
+    },
+    updateDispatchRequest(requestId, state, errorMessage) {
+      return updateDispatchRequestViaMcp({
+        callTool,
+        requestId,
+        state,
+        errorMessage,
+      });
     },
     getTask(taskId) {
       return fetchTaskViaMcp({ callTool, taskId });

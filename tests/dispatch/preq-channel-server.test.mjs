@@ -117,3 +117,82 @@ test('emitQueuedTaskEvents removes the current task from inflight when channel n
   assert.equal(calls.length, 1);
   assert.deepEqual(Array.from(inflightTaskKeys), []);
 });
+
+test('emitQueuedTaskEvents also emits explicit queued dispatch requests', async () => {
+  const calls = [];
+
+  const count = await emitQueuedTaskEvents({
+    mcp: {
+      server: {
+        async notification(payload) {
+          calls.push(payload);
+        },
+      },
+    },
+    tasks: [],
+    requests: [
+      {
+        id: 'request-1',
+        scope: 'project',
+        objective: 'insight',
+        project_key: 'PROJ',
+        engine: 'claude-code',
+        state: 'queued',
+        dispatch_target: 'claude-code-channel',
+        prompt_metadata: {
+          insightPromptB64: 'cHJvbXB0LWJhc2U2NA==',
+        },
+      },
+    ],
+    inflightTaskKeys: new Set(),
+  });
+
+  assert.equal(count, 1);
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, 'notifications/claude/channel');
+  assert.match(calls[0].params.content, /Dispatch queued PREQ request request-1/);
+  assert.match(calls[0].params.content, /action="insight"/);
+});
+
+test('emitQueuedTaskEvents prefers explicit task requests over legacy queued task events', async () => {
+  const calls = [];
+
+  const count = await emitQueuedTaskEvents({
+    mcp: {
+      server: {
+        async notification(payload) {
+          calls.push(payload);
+        },
+      },
+    },
+    tasks: [
+      {
+        task_key: 'PROJ-328',
+        status: 'todo',
+        run_state: 'queued',
+        dispatch_target: 'claude-code-channel',
+      },
+    ],
+    requests: [
+      {
+        id: 'request-ask-1',
+        scope: 'task',
+        objective: 'ask',
+        task_key: 'PROJ-328',
+        project_key: 'PROJ',
+        engine: 'claude-code',
+        state: 'queued',
+        dispatch_target: 'claude-code-channel',
+        prompt_metadata: {
+          askHint: '중복 없이 다시 정리해줘',
+        },
+      },
+    ],
+    inflightTaskKeys: new Set(),
+  });
+
+  assert.equal(count, 1);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].params.content, /Dispatch queued PREQ request request-ask-1/);
+  assert.doesNotMatch(calls[0].params.content, /Dispatch queued PREQ task PROJ-328/);
+});
