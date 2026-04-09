@@ -9,8 +9,12 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod';
 
 import {
+  buildDispatchRequestChannelEvent,
   buildQueuedTaskChannelEvent,
+  collectReservedTaskKeysFromDispatchRequests,
+  selectQueuedDispatchRequests,
   selectQueuedTasks,
+  summarizeQueuedDispatchRequestSelection,
   summarizeQueuedTaskSelection,
 } from './channel-helpers.mjs';
 import {
@@ -149,7 +153,7 @@ export function createChannelInstructions() {
     'Do not implement work in this dispatcher session.',
     'When a preq_dispatch_channel event arrives, call dispatch_task exactly once using the event metadata.',
     'The dispatch_task tool prepares the isolated worktree and launches the requested engine.',
-    'Treat task_key, project_key, action, engine, and branch_name as the source of truth.',
+    'Treat scope, dispatch_request_id, task_key, project_key, action, engine, branch_name, and encoded prompt metadata as the source of truth.',
     'No reply is expected from this one-way channel.',
   ].join(' ');
 }
@@ -197,9 +201,15 @@ export function createSerializedPollRunner(pollOnce, onError) {
 export async function emitQueuedTaskEvents({
   mcp,
   tasks,
+  requests = [],
   inflightTaskKeys,
 }) {
-  const queuedTasks = selectQueuedTasks(tasks, inflightTaskKeys);
+  const queuedRequests = selectQueuedDispatchRequests(requests, inflightTaskKeys);
+  const reservedTaskKeys = collectReservedTaskKeysFromDispatchRequests(
+    requests,
+    inflightTaskKeys,
+  );
+  const queuedTasks = selectQueuedTasks(tasks, inflightTaskKeys, reservedTaskKeys);
 
   for (const task of queuedTasks) {
     const taskKey = task.task_key || task.taskKey || task.id;
@@ -215,7 +225,22 @@ export async function emitQueuedTaskEvents({
     }
   }
 
-  return queuedTasks.length;
+  for (const request of queuedRequests) {
+    const requestId = request.id;
+    const inflightKey = `dispatch-request:${requestId}`;
+    inflightTaskKeys.add(inflightKey);
+    try {
+      await mcp.server.notification({
+        method: 'notifications/claude/channel',
+        params: buildDispatchRequestChannelEvent(request),
+      });
+    } catch (error) {
+      inflightTaskKeys.delete(inflightKey);
+      throw error;
+    }
+  }
+
+  return queuedTasks.length + queuedRequests.length;
 }
 
 export async function createPreqChannelServer({
@@ -249,21 +274,39 @@ export async function createPreqChannelServer({
     'dispatch_task',
     {
       title: 'Dispatch PREQSTATION task',
-      description:
-        'Prepare an isolated worktree and launch the requested engine for a queued PREQSTATION task.',
+        description:
+          'Prepare an isolated worktree and launch the requested engine for a queued PREQSTATION task.',
       inputSchema: {
-        task_key: z.string().trim().min(1),
-        project_key: z.string().trim().min(1).optional(),
+        scope: z.enum(['task', 'project']).optional(),
+        dispatch_request_id: z.string().trim().min(1).optional(),
+        task_key: z.string().trim().min(1).optional(),
+        project_key: z.string().trim().min(1),
         action: z.string().trim().min(1).optional(),
         engine: z.enum(PREQ_ENGINES).optional(),
         branch_name: z.string().trim().min(1).optional(),
+        ask_hint: z.string().trim().min(1).optional(),
+        insight_prompt_b64: z.string().trim().min(1).optional(),
       },
     },
-    async ({ task_key, project_key, action, engine, branch_name }) => {
-      const taskKey = task_key.trim().toUpperCase();
+    async ({
+      scope,
+      dispatch_request_id,
+      task_key,
+      project_key,
+      action,
+      engine,
+      branch_name,
+      ask_hint,
+      insight_prompt_b64,
+    }) => {
+      const taskKey = normalizeString(task_key).toUpperCase();
+      const dispatchRequestId = normalizeString(dispatch_request_id);
+      const launchIdentity = dispatchRequestId ? `dispatch-request:${dispatchRequestId}` : taskKey;
 
-      if (launchedTaskKeys.has(taskKey)) {
-        const message = `Task ${taskKey} was already dispatched in this session.`;
+      if (launchedTaskKeys.has(launchIdentity)) {
+        const message = dispatchRequestId
+          ? `Dispatch request ${dispatchRequestId} was already handled in this session.`
+          : `Task ${taskKey} was already dispatched in this session.`;
         logger.error(`[preq-dispatch-channel] ${message}`);
         return {
           content: [{ type: 'text', text: message }],
@@ -271,13 +314,20 @@ export async function createPreqChannelServer({
       }
 
       try {
+        if (dispatchRequestId) {
+          await taskClient.updateDispatchRequest(dispatchRequestId, 'dispatched');
+        }
+
         const result = await dispatchTaskImpl({
           taskClient,
-          taskKey,
+          taskKey: taskKey || null,
           projectKey: project_key,
           action,
           engine,
           branchName: branch_name,
+          scope,
+          askHint: ask_hint,
+          insightPromptB64: insight_prompt_b64,
           mcpUrl,
           mappingPath:
             process.env.PREQSTATION_PROJECT_MAP_PATH?.trim() || DEFAULT_PROJECT_MAP_PATH,
@@ -286,17 +336,28 @@ export async function createPreqChannelServer({
             process.env.PREQSTATION_WORKTREE_ROOT?.trim() || DEFAULT_WORKTREE_ROOT,
         });
 
-        launchedTaskKeys.add(taskKey);
+        launchedTaskKeys.add(launchIdentity);
         logger.error(
-          `[preq-dispatch-channel] launched ${result.engine} for ${result.task_key} in ${result.worktree_path} (pid ${result.pid})`,
+          `[preq-dispatch-channel] launched ${result.engine} for ${result.task_key || result.project_key} in ${result.worktree_path} (pid ${result.pid})`,
         );
 
         return {
           content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],
         };
       } catch (error) {
-        inflightTaskKeys.delete(taskKey);
+        inflightTaskKeys.delete(launchIdentity);
         const message = error instanceof Error ? error.message : String(error ?? 'Dispatch failed.');
+        if (dispatchRequestId) {
+          try {
+            await taskClient.updateDispatchRequest(dispatchRequestId, 'failed', message);
+          } catch (updateError) {
+            logger.error(
+              `[preq-dispatch-channel] failed to mark request ${dispatchRequestId} as failed: ${
+                updateError instanceof Error ? updateError.message : String(updateError)
+              }`,
+            );
+          }
+        }
         logger.error(`[preq-dispatch-channel] dispatch failed for ${taskKey}: ${message}`);
         return {
           isError: true,
@@ -326,16 +387,30 @@ export async function createPreqChannelServer({
   };
 
   const pollOnce = async () => {
-    const tasks = await taskClient.listDispatchTasks();
+    const [tasks, requests] = await Promise.all([
+      taskClient.listDispatchTasks(),
+      taskClient.listDispatchRequests(),
+    ]);
     if (shouldDebugQueueSelection()) {
-      const summary = summarizeQueuedTaskSelection(tasks, inflightTaskKeys)
+      const reservedTaskKeys = collectReservedTaskKeysFromDispatchRequests(
+        requests,
+        inflightTaskKeys,
+      );
+      const taskSummary = summarizeQueuedTaskSelection(
+        tasks,
+        inflightTaskKeys,
+        reservedTaskKeys,
+      )
         .map(({ taskKey, reason }) => `${taskKey || 'unknown'}:${reason}`)
         .join(', ');
+      const requestSummary = summarizeQueuedDispatchRequestSelection(requests, inflightTaskKeys)
+        .map(({ requestId, reason }) => `${requestId || 'unknown'}:${reason}`)
+        .join(', ');
       logger.error(
-        `[preq-dispatch-channel] polled ${tasks.length} task(s); queue selection => ${summary || 'none'}`,
+        `[preq-dispatch-channel] polled ${tasks.length} task(s) and ${requests.length} request(s); queue selection => tasks:${taskSummary || 'none'} requests:${requestSummary || 'none'}`,
       );
     }
-    const count = await emitQueuedTaskEvents({ mcp, tasks, inflightTaskKeys });
+    const count = await emitQueuedTaskEvents({ mcp, tasks, requests, inflightTaskKeys });
     if (count > 0) {
       logger.error(`[preq-dispatch-channel] emitted ${count} queued task event(s)`);
     }

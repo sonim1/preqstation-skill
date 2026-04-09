@@ -28,6 +28,17 @@ function normalizeString(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
 
+function decodePromptMetadata(value) {
+  const normalized = normalizeString(value);
+  if (!normalized) return '';
+
+  try {
+    return Buffer.from(normalized, 'base64').toString('utf8').trim();
+  } catch {
+    return normalized;
+  }
+}
+
 function toProjectKey(value) {
   return normalizeString(value).toUpperCase();
 }
@@ -343,6 +354,8 @@ export function renderDispatchPrompt({
   projectPath,
   qaRunId,
   qaTaskKeys,
+  askHint,
+  insightPrompt,
 }) {
   const qaTaskKeysValue = Array.isArray(qaTaskKeys)
     ? qaTaskKeys.map((taskId) => normalizeString(taskId)).filter(Boolean).join(', ')
@@ -353,6 +366,8 @@ export function renderDispatchPrompt({
     `Branch Name: ${branchName || 'N/A'}`,
     `QA Run ID: ${qaRunId || 'N/A'}`,
     `QA Task Keys: ${qaTaskKeysValue || 'N/A'}`,
+    `Ask Hint: ${askHint || 'N/A'}`,
+    `Insight Prompt: ${insightPrompt || 'N/A'}`,
     `Lifecycle Skill: preqstation (use preq_* MCP tools for task lifecycle)`,
     `User Objective: ${objective || 'implement'}`,
     '',
@@ -368,11 +383,13 @@ export function renderDispatchPrompt({
     '9) If User Objective starts with plan, do not run tests, build, lint, or other verification commands. Read local code only enough to produce the plan and stop after preq_plan_task.',
     '10) If User Objective starts with ask, rewrite the task note only, keep the workflow status unchanged, persist the final markdown with preq_update_task_note, and clear run_state by calling preq_update_task_status with the current workflow status from preq_get_task.',
     '11) If User Objective starts with ask, exclude any temporary trailing Ask: helper block from the final saved note and treat it only as optional rewrite guidance.',
-    '12) If User Objective starts with qa, Task ID may be N/A. In that branch, use QA Run ID as the external reporting handle, update it through the PREQSTATION skill, and do not invent a task lifecycle transition.',
-    '13) If User Objective starts with qa and QA Task Keys is present, call preq_get_task for each listed task key before browser testing. Treat those tasks as the QA scope and keep QA limited to that scope.',
-    '14) If the current agent has access to the dogfood skill, use it as the default QA workflow for browser testing and report generation.',
-    '15) If ./.preqstation-prompt.txt is missing in the current workspace, stop and report a dispatch failure instead of improvising from another directory.',
-    `16) Worktree cleanup after all work:\n    git -C ${projectPath || '<project_cwd>'} worktree remove ${worktreePath || '<cwd>'} --force\n    git -C ${projectPath || '<project_cwd>'} worktree prune`,
+    '12) If User Objective starts with insight, Task ID may be N/A. In that branch, inspect the local project, call preq_list_tasks(projectKey=..., detail=full), avoid obvious duplicates in inbox/todo/hold/ready, and create multiple inbox tasks with preq_create_task.',
+    '13) If User Objective starts with insight, do not mutate existing tasks, do not write a long-form implementation plan, and use Insight Prompt only as task-generation guidance.',
+    '14) If User Objective starts with qa, Task ID may be N/A. In that branch, use QA Run ID as the external reporting handle, update it through the PREQSTATION skill, and do not invent a task lifecycle transition.',
+    '15) If User Objective starts with qa and QA Task Keys is present, call preq_get_task for each listed task key before browser testing. Treat those tasks as the QA scope and keep QA limited to that scope.',
+    '16) If the current agent has access to the dogfood skill, use it as the default QA workflow for browser testing and report generation.',
+    '17) If ./.preqstation-prompt.txt is missing in the current workspace, stop and report a dispatch failure instead of improvising from another directory.',
+    `18) Worktree cleanup after all work:\n    git -C ${projectPath || '<project_cwd>'} worktree remove ${worktreePath || '<cwd>'} --force\n    git -C ${projectPath || '<project_cwd>'} worktree prune`,
   ].join('\n');
 }
 
@@ -406,6 +423,7 @@ export function buildEngineLaunchSpec(engine, options = {}) {
     'If that file is missing, stop immediately.',
     'If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work.',
     'If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status.',
+    'If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task.',
     'If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
   ].join(' ');
 
@@ -485,23 +503,34 @@ export async function dispatchTask({
   action,
   engine,
   branchName,
+  askHint,
+  insightPromptB64,
   mcpUrl,
   mappingPath = DEFAULT_PROJECT_MAP_PATH,
   repoRoots = DEFAULT_REPO_ROOTS,
   worktreeRoot = DEFAULT_WORKTREE_ROOT,
 }) {
-  const task = await taskClient.getTask(taskKey);
+  const normalizedTaskKey = toProjectKey(taskKey || '');
+  const task = normalizedTaskKey ? await taskClient.getTask(normalizedTaskKey) : null;
   const resolvedProjectKey = toProjectKey(projectKey || task?.task_key?.split('-')[0] || '');
   const resolvedEngine = normalizeString(engine || task?.engine || 'claude-code').toLowerCase();
   const resolvedBranchName =
     normalizeString(branchName) ||
     normalizeString(task?.branch_name) ||
     normalizeString(task?.branch) ||
-    defaultBranchName({ projectKey: resolvedProjectKey, taskKey });
+    defaultBranchName({ projectKey: resolvedProjectKey, taskKey: normalizedTaskKey });
+
+  const resolvedRepoUrl =
+    normalizeString(task?.repo || task?.project?.repoUrl) ||
+    normalizeString(
+      (await taskClient.listProjects()).find(
+        (project) => toProjectKey(project?.key || project?.projectKey || '') === resolvedProjectKey,
+      )?.repoUrl,
+    );
 
   const projectPath = await resolveProjectPath({
     projectKey: resolvedProjectKey,
-    repoUrl: task?.repo || task?.project?.repoUrl,
+    repoUrl: resolvedRepoUrl,
     mappingPath,
     repoRoots,
   });
@@ -516,13 +545,15 @@ export async function dispatchTask({
   await syncLocalEnvFiles(projectPath, worktreePath);
 
   const promptText = renderDispatchPrompt({
-    taskKey,
+    taskKey: normalizedTaskKey,
     projectKey: resolvedProjectKey,
     branchName: resolvedBranchName,
     engine: resolvedEngine,
     objective: action || 'implement',
     worktreePath,
     projectPath,
+    askHint: normalizeString(askHint),
+    insightPrompt: decodePromptMetadata(insightPromptB64),
   });
 
   const launch = await launchDispatchProcess({
@@ -534,7 +565,7 @@ export async function dispatchTask({
 
   return {
     ok: true,
-    task_key: taskKey,
+    task_key: normalizedTaskKey || null,
     project_key: resolvedProjectKey,
     engine: resolvedEngine,
     action: action || 'implement',

@@ -82,7 +82,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
       '/tmp/preqstation-mcp.json',
       '--dangerously-skip-permissions',
       '-p',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
@@ -92,7 +92,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
     args: [
       'exec',
       '--dangerously-bypass-approvals-and-sandbox',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
+      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, rewrite the task note only, use preq_update_task_note, and clear run_state with preq_update_task_status using the current workflow status. If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill.',
     ],
     env: {},
   });
@@ -135,6 +135,26 @@ test('renderDispatchPrompt includes ask-specific note rewrite rules', () => {
   assert.match(prompt, /preq_update_task_note/);
   assert.match(prompt, /preq_update_task_status/);
   assert.match(prompt, /workflow status unchanged/);
+});
+
+test('renderDispatchPrompt includes insight task-generation rules', () => {
+  const prompt = renderDispatchPrompt({
+    taskKey: null,
+    projectKey: 'PROJ',
+    branchName: 'preqstation/proj',
+    engine: 'claude-code',
+    objective: 'insight',
+    worktreePath: '/tmp/preqstation-dispatch-worktrees/PROJ/preqstation-proj',
+    projectPath: '/Users/example/projects/proj',
+    insightPrompt: 'Connections 페이지 개편 작업을 나눠줘',
+  });
+
+  assert.match(prompt, /Task ID: N\/A/);
+  assert.match(prompt, /User Objective: insight/);
+  assert.match(prompt, /Insight Prompt: Connections 페이지 개편 작업을 나눠줘/);
+  assert.match(prompt, /preq_list_tasks\(projectKey=\.\.\., detail=full\)/);
+  assert.match(prompt, /preq_create_task/);
+  assert.match(prompt, /do not mutate existing tasks/);
 });
 
 test('writeClaudeChildMcpConfig writes a project-local PREQ MCP config', async () => {

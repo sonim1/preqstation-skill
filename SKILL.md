@@ -63,6 +63,8 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
 | `preq_update_task_note`     | Record `engine` while replacing the task note markdown without changing workflow status                              |
 | `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
+| `preq_list_dispatch_requests` | Read-only; inspect explicit dispatch requests used for Claude/OpenClaw ask parity and project-level insight        |
+| `preq_update_dispatch_request` | Dispatch-channel only; mark an explicit dispatch request as `dispatched` or `failed` after launch succeeds/fails |
 | `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
 | `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state`  |
 | `preq_block_task`           | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state`    |
@@ -88,6 +90,7 @@ Load -> Initialize -> Execute -> Finalize
 - When Task ID is present, MUST call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 - If `preq_get_task` returns `latest_preq_result`, read it before substantive work and treat it as previous execution context, especially for resumed or previously blocked tasks.
 - When Task ID is present and the task is active, MUST call `preq_start_task`.
+- When Task ID is absent for project-level objectives such as `insight`, skip task lifecycle reads/writes and treat the prompt metadata plus project key as the source of truth.
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 
 3. Execute the user objective
@@ -104,6 +107,14 @@ Load -> Initialize -> Execute -> Finalize
   - Persist the rewritten markdown with `preq_update_task_note`.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
+- Else If user objective start with `insight`:
+  - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
+  - Inspect the local project from the current worktree and use the provided Insight Prompt only as task-generation guidance.
+  - Call `preq_list_tasks` with the current `projectKey` and `detail=full` before creating anything so you can avoid duplicates in `inbox`, `todo`, `hold`, and `ready`.
+  - Create multiple Inbox tasks with `preq_create_task`.
+  - Title each created task with a short shared topical prefix derived from the user intent or current work area.
+  - Keep `description` detailed, but keep `acceptanceCriteria` to checklist-only verification items.
+  - Do not mutate existing tasks and do not produce a long-form implementation plan instead of task creation.
 - Else If user objective start with `qa`:
   - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
   - Resolve `qa_run_id` from `.preqstation-prompt.txt` and use `preq_update_qa_run` to mark the run `running` as soon as the local target URL is known.
@@ -130,6 +141,7 @@ On any failure in a QA branch, update the QA run to `failed` with a concise mark
 4. Finalize:
    On success for implementation/review branches, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
    On success for ask branches, do not call `preq_complete_task`; the successful note rewrite ends after `preq_update_task_note` plus `preq_update_task_status` using the unchanged workflow status.
+   On success for insight branches, stop after the Inbox tasks are created; do not call `preq_complete_task` or mutate existing task workflow state.
 
 ## Deployment Strategy Contract (required)
 

@@ -2,8 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+  buildDispatchRequestChannelEvent,
   buildQueuedTaskChannelEvent,
+  collectReservedTaskKeysFromDispatchRequests,
+  selectQueuedDispatchRequests,
   selectQueuedTasks,
+  summarizeQueuedDispatchRequestSelection,
   summarizeQueuedTaskSelection,
 } from '../../src/dispatch/channel-helpers.mjs';
 
@@ -94,6 +98,7 @@ test('buildQueuedTaskChannelEvent creates dispatch content and normalized metada
   assert.match(event.content, /engine="codex"/);
   assert.match(event.content, /branch_name="task\/proj-123\/fix-auth"/);
   assert.deepEqual(event.meta, {
+    scope: 'task',
     task_key: 'PROJ-123',
     project_key: 'PROJ',
     action: 'implement',
@@ -132,5 +137,164 @@ test('summarizeQueuedTaskSelection explains why tasks were skipped', () => {
     { taskKey: 'PROJ-1', eligible: false, reason: 'already-inflight' },
     { taskKey: 'PROJ-2', eligible: false, reason: 'run_state=working' },
     { taskKey: 'PROJ-3', eligible: false, reason: 'dispatch_target=telegram' },
+  ]);
+});
+
+test('selectQueuedDispatchRequests keeps only queued Claude dispatch requests', () => {
+  const requests = [
+    {
+      id: 'request-1',
+      scope: 'task',
+      objective: 'ask',
+      state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      id: 'request-2',
+      scope: 'project',
+      objective: 'insight',
+      state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      id: 'request-3',
+      scope: 'project',
+      objective: 'insight',
+      state: 'failed',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      id: 'request-4',
+      scope: 'task',
+      objective: 'ask',
+      state: 'queued',
+      dispatch_target: 'telegram',
+    },
+  ];
+
+  const selected = selectQueuedDispatchRequests(requests, new Set(['dispatch-request:request-2']));
+
+  assert.deepEqual(selected, [
+    {
+      id: 'request-1',
+      scope: 'task',
+      objective: 'ask',
+      state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+  ]);
+});
+
+test('buildDispatchRequestChannelEvent preserves explicit ask objective metadata', () => {
+  const event = buildDispatchRequestChannelEvent({
+    id: 'request-1',
+    scope: 'task',
+    objective: 'ask',
+    task_key: 'PROJ-328',
+    project_key: 'PROJ',
+    engine: 'claude-code',
+    prompt_metadata: {
+      askHint: 'Acceptance criteria 중심으로 정리해줘',
+    },
+  });
+
+  assert.match(event.content, /Dispatch queued PREQ request request-1\./);
+  assert.match(event.content, /dispatch_request_id="request-1"/);
+  assert.match(event.content, /action="ask"/);
+  assert.match(event.content, /ask_hint="Acceptance criteria 중심으로 정리해줘"/);
+  assert.deepEqual(event.meta, {
+    scope: 'task',
+    dispatch_request_id: 'request-1',
+    task_key: 'PROJ-328',
+    project_key: 'PROJ',
+    action: 'ask',
+    engine: 'claude-code',
+    branch_name: null,
+    ask_hint: 'Acceptance criteria 중심으로 정리해줘',
+    insight_prompt_b64: null,
+    source: 'preq_dispatch_channel',
+  });
+});
+
+test('summarizeQueuedDispatchRequestSelection explains why requests were skipped', () => {
+  const summary = summarizeQueuedDispatchRequestSelection(
+    [
+      {
+        id: 'request-1',
+        state: 'queued',
+        dispatch_target: 'claude-code-channel',
+      },
+      {
+        id: 'request-2',
+        state: 'dispatched',
+        dispatch_target: 'claude-code-channel',
+      },
+      {
+        id: 'request-3',
+        state: 'queued',
+        dispatch_target: 'telegram',
+      },
+    ],
+    new Set(['dispatch-request:request-1']),
+  );
+
+  assert.deepEqual(summary, [
+    { requestId: 'request-1', eligible: false, reason: 'already-inflight' },
+    { requestId: 'request-2', eligible: false, reason: 'state=dispatched' },
+    { requestId: 'request-3', eligible: false, reason: 'dispatch_target=telegram' },
+  ]);
+});
+
+test('collectReservedTaskKeysFromDispatchRequests shadows legacy task dispatch for queued ask requests', () => {
+  const reserved = collectReservedTaskKeysFromDispatchRequests([
+    {
+      id: 'request-1',
+      scope: 'task',
+      objective: 'ask',
+      task_key: 'PROJ-328',
+      state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+    {
+      id: 'request-2',
+      scope: 'project',
+      objective: 'insight',
+      project_key: 'PROJ',
+      state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
+  ]);
+
+  assert.deepEqual(Array.from(reserved), ['PROJ-328']);
+});
+
+test('selectQueuedTasks skips tasks covered by explicit queued dispatch requests', () => {
+  const reservedTaskKeys = new Set(['PROJ-328']);
+  const selected = selectQueuedTasks(
+    [
+      {
+        task_key: 'PROJ-328',
+        status: 'todo',
+        run_state: 'queued',
+        dispatch_target: 'claude-code-channel',
+      },
+      {
+        task_key: 'PROJ-329',
+        status: 'todo',
+        run_state: 'queued',
+        dispatch_target: 'claude-code-channel',
+      },
+    ],
+    new Set(),
+    reservedTaskKeys,
+  );
+
+  assert.deepEqual(selected, [
+    {
+      task_key: 'PROJ-329',
+      status: 'todo',
+      run_state: 'queued',
+      dispatch_target: 'claude-code-channel',
+    },
   ]);
 });
