@@ -34,6 +34,7 @@ In this repository, a `Hand off test` means PREQ prepares an isolated auxiliary 
 ## Project Docs
 
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
+- Artifact publishing: [docs/artifact-publishing.md](docs/artifact-publishing.md)
 - Security: [SECURITY.md](SECURITY.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
 - License: [LICENSE](LICENSE)

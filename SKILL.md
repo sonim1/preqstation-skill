@@ -102,8 +102,11 @@ Load -> Initialize -> Execute -> Finalize
   - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
 - Else If user objective start with `ask`:
-  - Rewrite the existing task note only. Do not implement product changes, run tests, or change workflow status.
+  - Rewrite or update the existing task note. Keep the workflow status unchanged.
   - Treat the current task note plus any temporary trailing `Ask:` helper block as the source material for the rewrite.
+  - If the ask clearly requests a prototype or reviewable artifact, local artifact generation is allowed.
+  - Optional artifact publishing is allowed only when a safe provider is already available. Fast.io is the first supported provider target when available.
+  - Artifact publishing must use a `private-or-skip` policy. If the provider cannot create a private or member-restricted URL, skip publishing and still complete the note update.
   - Persist the rewritten markdown with `preq_update_task_note`.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
@@ -122,6 +125,7 @@ Load -> Initialize -> Execute -> Finalize
   - If the current agent has access to the `dogfood` skill, use it as the default QA workflow for browser testing and report generation.
   - Start the current project from the current worktree/branch, determine the local target URL, and run browser QA against that URL.
   - Limit QA to the scoped Ready tasks and the minimal navigation or sanity checks needed to reach and verify them. Do not expand into unrelated full-app exploratory QA. Report unrelated findings only when they block scoped verification or prevent the app from starting.
+  - QA reports may include optional artifact references for screenshots, videos, and documents. Use the same `private-or-skip` policy when a safe provider is available.
   - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, and summary counts.
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
