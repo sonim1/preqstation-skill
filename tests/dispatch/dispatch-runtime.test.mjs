@@ -141,6 +141,23 @@ test('renderDispatchPrompt includes ask-specific note rewrite rules', () => {
   assert.match(prompt, /screenshots, videos, and documents/i);
 });
 
+test('renderDispatchPrompt tells plan runs how to recover bootstrap repos', () => {
+  const prompt = renderDispatchPrompt({
+    taskKey: 'KFPT-22',
+    projectKey: 'KFPT',
+    branchName: 'task/kfpt-22/plan-realistic-four-cut-output-sizing-and-layout-u',
+    engine: 'codex',
+    objective: 'plan',
+    worktreePath: '/tmp/preqstation-dispatch-worktrees/KFPT/task-kfpt-22-plan-realistic-four-cut-output-sizing-and-layout-u',
+    projectPath: '/Users/example/projects/k-photos-app',
+  });
+
+  assert.match(prompt, /bootstrap repo/i);
+  assert.match(prompt, /git remote add origin/i);
+  assert.match(prompt, /origin\/main/i);
+  assert.match(prompt, /recreate or refresh the worktree/i);
+});
+
 test('renderDispatchPrompt includes insight task-generation rules', () => {
   const prompt = renderDispatchPrompt({
     taskKey: null,

@@ -24,8 +24,11 @@ Default flow:
 
 1. Assume the user wants to configure local repo paths for PREQ projects in this environment.
 2. Confirm or configure the runtime MCP prerequisite only if needed.
-   - Claude preferred path: `claude mcp add --transport http preqstation https://<your-domain>/mcp`
+   - For Claude Code, prefer a single user-scoped PREQ MCP registration to avoid duplicate local or project entries.
+   - Claude preferred path: `claude mcp add -s user --transport http preqstation https://<your-domain>/mcp`
    - Reuse an existing MCP config when already present.
+   - If `preqstation` is missing, ask only for the PREQ domain you need and then run the add command.
+   - If the user reports repeated `preqstation` auth prompts and multiple local or project-scoped `preqstation` entries exist, explain that duplicate scope is a likely cause and prefer consolidating to one user-scoped registration.
 3. Explain where local project mappings are stored:
    - `~/.preqstation-dispatch/projects.json`
    - JSON shape: `{ "projects": { "PROJ": "/absolute/path/to/repo" } }`

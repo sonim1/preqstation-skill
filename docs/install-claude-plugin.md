@@ -55,10 +55,12 @@ If you want the plugin to remind you of these commands from inside Claude, run:
 
 ## Configure PREQ MCP
 
-The plugin does not replace PREQ MCP registration. Add the remote MCP server separately:
+The plugin still needs the remote PREQ MCP server, but `/preqstation:setup` can add or verify it for you after install.
+
+If you want to add it manually first, prefer a single user-scoped entry:
 
 ```bash
-claude mcp add --transport http preqstation https://<your-domain>/mcp
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
 ```
 
 Claude starts OAuth on the first real PREQ request.
@@ -73,10 +75,12 @@ After the plugin is installed, start Claude and run:
 
 This command:
 
-- verifies the `preqstation` MCP connection
+- adds or verifies the user-scoped `preqstation` MCP connection
 - fetches PREQ projects when `preq_list_projects` is available
 - offers auto-scan or manual repo mapping
 - saves project mappings in `~/.preqstation-dispatch/projects.json`
+
+If Claude keeps asking you to authenticate `preqstation` after restarts, check for multiple local or project-scoped `preqstation` entries and consolidate to one user-scoped registration.
 
 For a quick overview of the available PREQSTATION paths and commands inside Claude, run:
 

@@ -99,6 +99,10 @@ Load -> Initialize -> Execute -> Finalize
 - If user objective start with `plan`:
   - Start to plan using the local code.
   - Planning means plan generation only. You may inspect local code, but you must not implement product changes, run deploy steps, or run tests, build, lint, or other verification commands.
+  - Before blocking for missing code, inspect the primary checkout as well as the current worktree. If the worktree is in a bootstrap repo state, such as only `.gitignore` being tracked, but the primary checkout contains the real app files, treat that as repo recovery rather than a missing project.
+  - During bootstrap repo recovery, ensure `origin` exists and matches the PREQ repo URL. If `origin` is missing and the repo URL is known, add it with `git remote add origin <repo_url>`.
+  - Commit the baseline project files on `main`, push `origin/main`, recreate or refresh the worktree, and continue planning after the code becomes inspectable.
+  - Block the run only when the primary checkout is the wrong repo, the repo URL is unavailable or mismatched, or the bootstrap recovery push to `origin/main` fails.
   - Call `preq_plan_task` with plan markdown and implementation checklist.
   - Process skills are allowed only as internal guidance. This run must stay non-interactive and end at `preq_plan_task`.
 - Else If user objective start with `ask`:

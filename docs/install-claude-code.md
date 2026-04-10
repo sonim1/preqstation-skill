@@ -14,10 +14,11 @@ This installs the core `preqstation` worker skill for Claude Code only.
 ## 2. Register the PREQ MCP server
 
 ```bash
-claude mcp add --transport http preqstation https://<your-domain>/mcp
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
 ```
 
 Replace `<your-domain>` with your PREQ web app domain.
+User scope is preferred so Claude does not accumulate duplicate project-local PREQ entries.
 
 ## 3. Complete OAuth
 

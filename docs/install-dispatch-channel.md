@@ -23,10 +23,10 @@ Current status:
 
 ## Shared Prerequisite: register PREQ MCP
 
-Register the remote PREQ MCP server first:
+Register the remote PREQ MCP server first. Prefer a single user-scoped entry so the dispatcher and normal Claude sessions reuse the same PREQ config:
 
 ```bash
-claude mcp add --transport http preqstation https://<your-domain>/mcp
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
 ```
 
 The dispatch runtime tries to reuse Claude's configured PREQ MCP URL automatically.
@@ -52,7 +52,7 @@ If your repos are not under the default roots, either set `PREQSTATION_REPO_ROOT
 }
 ```
 
-If the plugin is installed, `/preqstation:setup` can manage this mapping file for you.
+If the plugin is installed, `/preqstation:setup` can add or verify the PREQ MCP entry for you and manage this mapping file.
 
 ## Installed Plugin Mode
 

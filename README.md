@@ -42,7 +42,7 @@ In this repository, a `Hand off test` means PREQ prepares an isolated auxiliary 
 ## Prerequisites
 
 - Claude plugin and dispatch runtime users need Node 18+ on PATH
-- Claude plugin users still register the remote PREQ MCP server separately
+- Claude plugin users still need the remote PREQ MCP server, but `/preqstation:setup` can add or verify it for you
 
 ## MCP Surfaces
 
@@ -64,19 +64,19 @@ claude plugin install preqstation@preqstation
 
 The plugin already includes the packaged `preqstation` skill for Claude Code, so you do not need a separate `npx skills add ... -a claude-code` install unless you intentionally want worker-only mode without the plugin helpers.
 
-Register the remote PREQ MCP server:
-
-```bash
-claude mcp add --transport http preqstation https://<your-domain>/mcp
-```
-
 Then start Claude and run:
 
 ```text
 /preqstation:setup
 ```
 
-`/preqstation:setup` verifies the `preqstation` MCP connection, fetches projects when `preq_list_projects` is available, lets you choose auto-scan or manual mapping, and saves repo mappings in `~/.preqstation-dispatch/projects.json`.
+`/preqstation:setup` can add or verify the user-scoped `preqstation` MCP connection, fetches projects when `preq_list_projects` is available, lets you choose auto-scan or manual mapping, and saves repo mappings in `~/.preqstation-dispatch/projects.json`.
+
+If you prefer to register the PREQ MCP server yourself first, use:
+
+```bash
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
+```
 
 Useful plugin helper commands:
 
@@ -102,6 +102,68 @@ npx skills add sonim1/preqstation-skill -g -a gemini-cli
 ```
 
 Gemini CLI support is partial. Use it only if your Gemini environment already supports remote PREQ MCP, otherwise fall back to the shell helper path.
+
+## Update Existing Install
+
+If PREQSTATION already works in one of your runtimes and you only want the latest skill or plugin changes, use the matching update path below.
+
+### Claude Code Plugin
+
+```bash
+claude plugin marketplace update preqstation
+claude plugin update preqstation@preqstation
+claude plugin list
+```
+
+Then open Claude and refresh setup if needed:
+
+```text
+/preqstation:setup
+```
+
+This is the recommended Claude Code path. The plugin already bundles the `preqstation` worker skill, so you do not need a separate `npx skills add ... -a claude-code` step unless you intentionally use worker-only mode.
+
+### Claude Code Worker-Only Mode
+
+```bash
+npx skills add sonim1/preqstation-skill -g -a claude-code
+claude mcp list
+```
+
+If the PREQ MCP server is missing, add it again:
+
+```bash
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
+```
+
+### Codex
+
+```bash
+npx skills add sonim1/preqstation-skill -g -a codex
+codex mcp list
+```
+
+If the PREQ MCP server is missing, add it again:
+
+```bash
+codex mcp add preqstation --url https://<your-domain>/mcp
+```
+
+Codex stays on the worker + remote MCP path only. It does not use the Claude plugin or Claude dispatch channel.
+
+### OpenClaw
+
+OpenClaw dispatch currently lives in the separate `preqstation-openclaw` repository.
+
+If you use that path, update the linked plugin there:
+
+```bash
+openclaw plugins install --link --dangerously-force-unsafe-install /Users/kendrick/projects/preqstation-openclaw
+openclaw gateway restart
+openclaw plugins inspect preqstation-openclaw
+```
+
+After the restart, refresh project mappings if needed with the copied `/preqsetup auto ...` command from Projects or run `/preqsetup status` in OpenClaw to verify mappings.
 
 ## Canonical Claude Commands
 
@@ -139,6 +201,7 @@ OAuth starts when the client first makes a real request to `/mcp`.
 
 - Codex often starts login during `mcp add` because it probes the server immediately.
 - Claude Code usually stores the server first and starts OAuth on first real use.
+- If Claude keeps asking you to authenticate `preqstation` after restarts, check for multiple local or project-scoped `preqstation` entries and prefer a single user-scoped registration.
 - The local dispatch runtime keeps its own OAuth cache in `~/.preqstation-dispatch/oauth.json` and opens the PREQ OAuth page in your browser automatically when it needs a dispatch-specific token.
 - If the dispatcher cannot resolve the PREQ MCP URL from Claude config, start it with an explicit override such as `PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation`.
 
