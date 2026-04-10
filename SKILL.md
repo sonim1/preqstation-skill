@@ -112,7 +112,9 @@ Load -> Initialize -> Execute -> Finalize
   - Optional artifact publishing is allowed only when a safe provider is already available. Fast.io is the first supported provider target when available.
   - If the current agent already has an authenticated Fast.io MCP session, treat Fast.io as already available and attempt publication without waiting for extra provider instructions.
   - Artifact publishing must use a `private-or-skip` policy. For Fast.io, authenticated workspace targets, member-restricted shares, and registered-account shares count as acceptable private access. Skip `anyone with the link`, quickshare-style links, or other unauthenticated public-style URLs.
-  - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs.
+  - For prototype or reviewable artifact asks, record the artifact publishing result or skip reason in the note. If publishing is skipped, include the local artifact path and a concise reason such as Fast.io unavailable, unauthenticated, or no private target.
+  - Treat localhost and `127.0.0.1` URLs as local-only diagnostics. Do not present them as the only review link; either publish a private artifact URL or explicitly mark the artifact as local-only with the skip reason.
+  - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs or artifact publishing skip note.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
 - Else If user objective start with `insight`:
@@ -131,6 +133,7 @@ Load -> Initialize -> Execute -> Finalize
   - Start the current project from the current worktree/branch, determine the local target URL, and run browser QA against that URL.
   - Limit QA to the scoped Ready tasks and the minimal navigation or sanity checks needed to reach and verify them. Do not expand into unrelated full-app exploratory QA. Report unrelated findings only when they block scoped verification or prevent the app from starting.
   - QA reports may include optional artifact references for screenshots, videos, and documents. Use the same `private-or-skip` policy when a safe provider is available.
+  - If QA artifact publishing is skipped after generating local artifacts, record the artifact publishing result or skip reason in the final QA report.
   - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, and summary counts.
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
