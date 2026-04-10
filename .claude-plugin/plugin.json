@@ -1,7 +1,7 @@
 {
   "name": "preqstation",
   "description": "PREQSTATION Claude Code helper plugin and experimental local Node-backed dispatch channel for PREQ task execution",
-  "version": "0.1.28",
+  "version": "0.1.31",
   "author": {
     "name": "PREQSTATION"
   },
