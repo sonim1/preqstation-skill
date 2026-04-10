@@ -2,7 +2,12 @@
 
 All notable changes to this project are documented in this file.
 
-## Unreleased
+## 0.1.32 - 2026-04-10
+
+- Clarified the ask artifact publishing contract so authenticated Fast.io sessions are treated as an available publish target.
+- Explicitly allowed authenticated workspace, member-restricted share, and registered-account Fast.io share targets while rejecting `anyone with the link` and `quickshare` for automatic publishing.
+
+## 0.1.31 - 2026-04-09
 
 - Fixed dispatch queue recovery when a Claude channel notification fails before launch.
 - Clarified the recommended Claude install path and marked Gemini CLI support as partial.

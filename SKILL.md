@@ -110,8 +110,9 @@ Load -> Initialize -> Execute -> Finalize
   - Treat the current task note plus any temporary trailing `Ask:` helper block as the source material for the rewrite.
   - If the ask clearly requests a prototype or reviewable artifact, local artifact generation is allowed.
   - Optional artifact publishing is allowed only when a safe provider is already available. Fast.io is the first supported provider target when available.
-  - Artifact publishing must use a `private-or-skip` policy. If the provider cannot create a private or member-restricted URL, skip publishing and still complete the note update.
-  - Persist the rewritten markdown with `preq_update_task_note`.
+  - If the current agent already has an authenticated Fast.io MCP session, treat Fast.io as already available and attempt publication without waiting for extra provider instructions.
+  - Artifact publishing must use a `private-or-skip` policy. For Fast.io, authenticated workspace targets, member-restricted shares, and registered-account shares count as acceptable private access. Skip `anyone with the link`, quickshare-style links, or other unauthenticated public-style URLs.
+  - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
 - Else If user objective start with `insight`:
