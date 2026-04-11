@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.33 - 2026-04-11
+
+- Generalized ask artifact publishing guidance beyond Fast.io so any authenticated artifact provider can be used.
+- Added reviewer-friendly HTML prototype screenshot guidance and 7-day expiring share/quickshare link metadata.
+
 ## 0.1.32 - 2026-04-10
 
 - Clarified the ask artifact publishing contract so authenticated Fast.io sessions are treated as an available publish target.

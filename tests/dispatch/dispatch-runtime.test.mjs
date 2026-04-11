@@ -73,6 +73,8 @@ test('parseWorktreeList extracts worktree paths and branch refs', () => {
 });
 
 test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
+  const expectedPrompt = 'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, update the task note, use preq_update_task_note, keep the workflow status unchanged, and clear run_state with preq_update_task_status using the current workflow status. Prototype-style asks may generate local artifacts. If an authenticated artifact provider is already available, attempt publication and keep private-or-skip by using authenticated workspace/share targets when possible. Fast.io is one supported provider; authenticated workspace storage, member-restricted shares, and registered-account shares are acceptable. If share or quickshare-style temporary external links are available, create 7-day expiring reviewer links, record them with access=quickshare and expires=..., and do not create non-expiring anyone-with-the-link URLs. If the artifact is an HTML prototype or HTML mockup, generate at least one screenshot PNG and attempt to publish both the HTML source and screenshot. Record published links under an Artifacts: markdown block and record the artifact publishing result or skip reason in the note; localhost URLs are local-only and must not be presented as the only review link. If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill. QA reports may include optional artifact references for screenshots, videos, and documents.';
+
   assert.deepEqual(buildEngineLaunchSpec('claude-code', { mcpConfigPath: '/tmp/preqstation-mcp.json' }), {
     command: 'claude',
     args: [
@@ -82,7 +84,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
       '/tmp/preqstation-mcp.json',
       '--dangerously-skip-permissions',
       '-p',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, update the task note, use preq_update_task_note, keep the workflow status unchanged, and clear run_state with preq_update_task_status using the current workflow status. Prototype-style asks may generate local artifacts. If Fast.io access is already authenticated, treat it as an available provider, attempt publication, and keep private-or-skip by using only authenticated workspace/share targets. Member-restricted or registered-account Fast.io shares are acceptable; anyone-with-the-link and quickshare-style links are not. Record the artifact publishing result or skip reason in the note; localhost URLs are local-only and must not be presented as the only review link. If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill. QA reports may include optional artifact references for screenshots, videos, and documents.',
+      expectedPrompt,
     ],
     env: {},
   });
@@ -92,7 +94,7 @@ test('buildEngineLaunchSpec uses non-interactive launch commands', () => {
     args: [
       'exec',
       '--dangerously-bypass-approvals-and-sandbox',
-      'Read and execute instructions from ./.preqstation-prompt.txt in the current workspace. Treat that file as the source of truth. If that file is missing, stop immediately. If a Task ID is present there, call preq_get_task first, then preq_start_task before substantive work. If User Objective is ask, update the task note, use preq_update_task_note, keep the workflow status unchanged, and clear run_state with preq_update_task_status using the current workflow status. Prototype-style asks may generate local artifacts. If Fast.io access is already authenticated, treat it as an available provider, attempt publication, and keep private-or-skip by using only authenticated workspace/share targets. Member-restricted or registered-account Fast.io shares are acceptable; anyone-with-the-link and quickshare-style links are not. Record the artifact publishing result or skip reason in the note; localhost URLs are local-only and must not be presented as the only review link. If User Objective is insight, inspect the current project, use preq_list_tasks with the current project key to avoid duplicates, and create Inbox tasks with preq_create_task. If User Objective is qa, use QA Run ID and QA Task Keys from that file, scope QA to those Ready tasks, and report through the PREQSTATION skill. QA reports may include optional artifact references for screenshots, videos, and documents.',
+      expectedPrompt,
     ],
     env: {},
   });
@@ -136,10 +138,17 @@ test('renderDispatchPrompt includes ask-specific note rewrite rules', () => {
   assert.match(prompt, /preq_update_task_status/);
   assert.match(prompt, /workflow status unchanged/);
   assert.match(prompt, /prototype-style asks may generate local artifacts/i);
-  assert.match(prompt, /Fast\.io access is already authenticated/i);
-  assert.match(prompt, /registered-account Fast\.io shares are acceptable/i);
+  assert.match(prompt, /authenticated artifact provider/i);
+  assert.match(prompt, /Fast\.io is one supported provider/i);
+  assert.match(prompt, /HTML prototype|HTML mockup/i);
+  assert.match(prompt, /screenshot/i);
+  assert.match(prompt, /Artifacts:/i);
+  assert.match(prompt, /registered-account shares are acceptable/i);
   assert.match(prompt, /private-or-skip/i);
-  assert.match(prompt, /quickshare-style links are not/i);
+  assert.match(prompt, /7-day expiring reviewer links/i);
+  assert.match(prompt, /access=quickshare/i);
+  assert.match(prompt, /expires=\.\.\./i);
+  assert.match(prompt, /non-expiring anyone-with-the-link URLs/i);
   assert.match(prompt, /publishing result or skip reason/i);
   assert.match(prompt, /localhost URLs are local-only/i);
   assert.match(prompt, /screenshots, videos, and documents/i);

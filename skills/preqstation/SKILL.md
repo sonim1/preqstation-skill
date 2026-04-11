@@ -109,10 +109,13 @@ Load -> Initialize -> Execute -> Finalize
   - Rewrite or update the existing task note. Keep the workflow status unchanged.
   - Treat the current task note plus any temporary trailing `Ask:` helper block as the source material for the rewrite.
   - If the ask clearly requests a prototype or reviewable artifact, local artifact generation is allowed.
-  - Optional artifact publishing is allowed only when a safe provider is already available. Fast.io is the first supported provider target when available.
-  - If the current agent already has an authenticated Fast.io MCP session, treat Fast.io as already available and attempt publication without waiting for extra provider instructions.
-  - Artifact publishing must use a `private-or-skip` policy. For Fast.io, authenticated workspace targets, member-restricted shares, and registered-account shares count as acceptable private access. Skip `anyone with the link`, quickshare-style links, or other unauthenticated public-style URLs.
-  - For prototype or reviewable artifact asks, record the artifact publishing result or skip reason in the note. If publishing is skipped, include the local artifact path and a concise reason such as Fast.io unavailable, unauthenticated, or no private target.
+  - Artifact publishing is best-effort, but it is mandatory to attempt when a safe artifact provider is already available. Use the provider already authenticated in the current agent session; Fast.io is one supported provider, not the only valid target.
+  - If the current agent already has an authenticated Fast.io MCP session or another authenticated provider, treat that provider as already available and attempt publication without waiting for extra provider instructions.
+  - Durable artifact links must use a `private-or-skip` policy. Authenticated workspace targets, member-restricted shares, and registered-account shares count as acceptable private access. Skip non-expiring `anyone with the link` URLs or other public-link-only modes.
+  - If the provider can create temporary external share or quickshare links, create 7-day expiring reviewer links for the published artifacts. Mark them with `access=quickshare` or the provider's equivalent and include `expires=...`; do not create non-expiring public links.
+  - If the local artifact is an HTML prototype or HTML mockup, generate at least one screenshot PNG for review, then attempt to publish both the HTML source and screenshot artifact when an authenticated provider is available.
+  - Record published links under an `Artifacts:` markdown block using lines like `- [image] Desktop screenshot | provider=fastio | access=quickshare | expires=2026-04-18T00:00:00Z | url=...` and `- [document] HTML prototype | provider=fastio | access=private-workspace | url=...`.
+  - For prototype or reviewable artifact asks, record the artifact publishing result or skip reason in the note. If publishing is skipped, include the local artifact path and a concise reason such as provider unavailable, unauthenticated, or no safe target.
   - Treat localhost and `127.0.0.1` URLs as local-only diagnostics. Do not present them as the only review link; either publish a private artifact URL or explicitly mark the artifact as local-only with the skip reason.
   - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs or artifact publishing skip note.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
