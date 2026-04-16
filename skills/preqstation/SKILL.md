@@ -16,10 +16,13 @@ Recommended MCP mode:
 - Register the remote MCP endpoint from the PREQSTATION `projects-manager` service:
   - Claude Code: `claude mcp add -s user --transport http preqstation https://<your-domain>/mcp`
   - Codex: `codex mcp add preqstation --url https://<your-domain>/mcp`
+  - Gemini CLI: `gemini mcp add --scope user --transport http preqstation https://<your-domain>/mcp`
 - OAuth starts when the client first makes a real request to `/mcp`
 - Codex often triggers login during `add` because it probes the server immediately
+- Gemini CLI may also prompt for auth during MCP registration or first real tool call
 - Claude Code usually stores the config first and may show `Needs authentication` until first use or `claude mcp get preqstation`
 - Prefer one user-scoped Claude Code PREQ registration so you do not accumulate duplicate project-local entries
+- Verify MCP registration with `claude mcp list`, `codex mcp list`, or `gemini mcp list`
 - Complete the browser login flow when prompted by the client
 
 Optional shell helper mode:
@@ -39,6 +42,9 @@ Each agent must identify itself and use the corresponding `engine` value in **al
 | Gemini (Google)      | `gemini-cli`  |
 
 Always include your `engine` value when listing, creating, planning, starting, completing, reviewing, or blocking tasks.
+
+Gemini CLI workers can run interactively with `gemini` or headless with `gemini -p "<prompt>"`.
+If your installed Gemini environment does not expose remote HTTP MCP, use the shell helper fallback instead of this MCP path.
 
 ## MCP Plugin Mode (Recommended)
 

@@ -5,7 +5,7 @@ PREQSTATION worker skill and Claude Code helper plugin.
 This repository covers three surfaces:
 
 - the core `preqstation` worker skill
-- remote PREQ `/mcp` setup for Claude Code, Codex, and partial Gemini CLI support
+- remote PREQ `/mcp` setup for Claude Code, Codex, and Gemini CLI
 - a Claude plugin with setup/status/update/help commands
 
 OpenClaw production dispatch still lives in the separate `preqstation-openclaw` repository. This repository no longer ships a Claude-specific local dispatcher.
@@ -13,7 +13,7 @@ OpenClaw production dispatch still lives in the separate `preqstation-openclaw` 
 ## Support Status
 
 - worker skill + remote PREQ MCP: stable for Claude Code and Codex
-- Gemini CLI worker path: partial and depends on Gemini remote MCP support
+- Gemini CLI worker path: supported when the local Gemini CLI exposes remote HTTP MCP
 - Claude plugin setup helpers: supported for Claude Code
 - shell helper mode: fallback
 - OpenClaw migration docs: legacy
@@ -23,7 +23,7 @@ OpenClaw production dispatch still lives in the separate `preqstation-openclaw` 
 - Claude Code plugin (recommended): [docs/install-claude-plugin.md](docs/install-claude-plugin.md)
 - Claude Code worker-only mode: [docs/install-claude-code.md](docs/install-claude-code.md)
 - Codex: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
-- Gemini CLI (partial): [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
+- Gemini CLI: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
 - Shell helper fallback: [docs/install-shell-helper.md](docs/install-shell-helper.md)
 
 ## Project Docs
@@ -93,9 +93,11 @@ Codex uses the worker + remote MCP path only. It does not use the Claude plugin.
 
 ```bash
 npx skills add sonim1/preqstation-skill -g -a gemini-cli
+gemini mcp add --scope user --transport http preqstation https://<your-domain>/mcp
+gemini mcp list
 ```
 
-Gemini CLI support is partial. Use it only if your Gemini environment already supports remote PREQ MCP, otherwise fall back to the shell helper path.
+Gemini CLI uses the same worker + remote MCP path when the local CLI exposes remote HTTP MCP. If it does not, fall back to the shell helper path.
 
 ## Update Existing Install
 

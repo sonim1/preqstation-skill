@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.36 - 2026-04-16
+
+- Added concrete Gemini CLI MCP install and verification commands to the public install docs and packaged worker skill.
+- Clarified that Gemini follows the same worker plus remote MCP path when the local CLI exposes remote HTTP MCP, with shell-helper fallback otherwise.
+
 ## 0.1.35 - 2026-04-16
 
 - Removed the experimental Claude-specific local dispatch runtime, bundle, and contributor-only watcher config from this repository.

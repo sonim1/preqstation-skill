@@ -3,7 +3,7 @@
 Use this path when Codex or Gemini CLI will execute PREQ tasks as the worker.
 
 Codex is supported on the worker + remote MCP path.
-Gemini CLI support is partial and depends on whether your Gemini environment supports remote PREQ MCP.
+Gemini CLI works on the same worker + remote MCP path when your installed Gemini CLI supports remote HTTP MCP.
 
 ## Codex
 
@@ -31,15 +31,24 @@ Codex often probes the MCP server during `mcp add`, so browser login may start i
 npx skills add sonim1/preqstation-skill -g -a gemini-cli
 ```
 
-### 2. Configure MCP only if your Gemini setup supports remote PREQ MCP
+### 2. Register the PREQ MCP server
 
-This repository keeps the PREQ worker skill instructions here, but MCP registration details may depend on your Gemini CLI environment and how that runtime handles remote MCP servers.
-If your Gemini environment does not support remote PREQ MCP, use the shell helper fallback instead of treating this as a fully supported path.
+```bash
+gemini mcp add --scope user --transport http preqstation https://<your-domain>/mcp
+```
 
-Use the same PREQ endpoint:
+### 3. Verify the MCP registration
 
-```text
-https://<your-domain>/mcp
+```bash
+gemini mcp list
+```
+
+### 4. Run Gemini
+
+```bash
+gemini
+# or
+gemini -p "Read and execute the PREQSTATION task instructions from this workspace."
 ```
 
 ## Engine Mapping
@@ -54,5 +63,5 @@ PREQ task `engine` values must match the worker:
 
 - Install the skill only on the runtimes that should own PREQ execution.
 - Prefer MCP mode when available.
-- If remote MCP is not available in your Gemini environment, use the shell helper fallback instead.
-- Codex does not need a Claude-style dispatch server here. Keep using the worker + MCP flow unless you are explicitly testing Claude Code dispatch.
+- If your installed Gemini CLI does not expose remote HTTP MCP, use the shell helper fallback instead.
+- Codex and Gemini CLI do not need a Claude-style dispatch server here. Keep using the worker + MCP flow unless you are explicitly testing Claude Code dispatch.
