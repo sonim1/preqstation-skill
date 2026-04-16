@@ -23,12 +23,9 @@ Then route by intent:
   - use `docs/install-codex-gemini.md`
 - Experimental Claude dispatch runtime:
   - describe this as the `Hand off test` flow
-  - show the real terminal command
-  - preferred launch:
-    `claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation`
-  - if PREQ MCP URL discovery fails:
-    `PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation`
-  - point to `docs/install-dispatch-channel.md` for details
+  - explain that the default installed Claude plugin no longer auto-starts this watcher
+  - route production dispatcher users to OpenClaw for now
+  - point contributor/manual testers to `docs/install-dispatch-channel.md`
 - Shell helper fallback:
   - use `docs/install-shell-helper.md`
 - OpenClaw migration or production dispatcher questions:
@@ -38,4 +35,5 @@ Rules:
 
 - Do not present `/preqstation:help` as a replacement for the actual dispatch runtime entrypoint.
 - Do not send users to `/preqstation:start-dispatch`; that helper no longer exists.
+- Do not claim that `claude --dangerously-load-development-channels plugin:preqstation@preqstation` starts the watcher in current plugin installs.
 - Be explicit that OpenClaw production dispatch is still separate today.

@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.34 - 2026-04-15
+
+- Removed the default Claude plugin dispatch-channel MCP server so installing or updating the plugin no longer starts a background PREQ queue poller.
+- Updated Claude dispatch docs to present the local watcher as a manual experimental path and documented stale watcher cleanup after old installs.
+
 ## 0.1.33 - 2026-04-11
 
 - Generalized ask artifact publishing guidance beyond Fast.io so any authenticated artifact provider can be used.

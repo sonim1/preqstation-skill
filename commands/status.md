@@ -20,7 +20,7 @@ Current support status:
 - worker skill + remote PREQ MCP: stable for Claude Code and Codex
 - Gemini CLI worker path: partial and depends on Gemini remote MCP support
 - Claude plugin setup helpers: supported for Claude Code
-- Claude dispatch channel: experimental
+- Claude dispatch channel: experimental and manual; not auto-started by the default plugin
 - shell helper mode: fallback
 - OpenClaw migration docs: legacy
 

@@ -33368,7 +33368,7 @@ function createPreqMcpTaskClient({
 }
 
 // src/dispatch/preq-dispatch-channel-server.mjs
-var PREQ_CHANNEL_SERVER_VERSION = "0.1.33";
+var PREQ_CHANNEL_SERVER_VERSION = "0.1.34";
 var DEFAULT_CLAUDE_CONFIG_PATH = path3.join(os3.homedir(), ".claude.json");
 function readPollIntervalMs() {
   const raw = process.env.PREQ_POLL_INTERVAL_MS?.trim();

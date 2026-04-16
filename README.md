@@ -1,13 +1,13 @@
 # preqstation-skill
 
-PREQSTATION worker skill, Claude plugin, and local Claude dispatch runtime.
+PREQSTATION worker skill, Claude plugin, and optional local Claude dispatch runtime source.
 
 This repository currently covers four surfaces:
 
 - the core `preqstation` worker skill
 - remote PREQ `/mcp` setup for Claude Code and Codex, plus a partial Gemini CLI path
 - a Claude plugin with setup/status helpers
-- an experimental Claude-only dispatch channel runtime for Hand off tests
+- optional experimental Claude-only dispatch channel runtime source for Hand off tests
 
 For existing OpenClaw users, the current production dispatcher still lives in `preqstation-openclaw`. Keep using that path until the migration guide says otherwise: [docs/migrate-openclaw.md](docs/migrate-openclaw.md). That guide also documents how OpenClaw dispatch and Claude Code dispatch compare after work completes.
 
@@ -16,7 +16,7 @@ For existing OpenClaw users, the current production dispatcher still lives in `p
 - worker skill + remote PREQ MCP: stable for Claude Code and Codex
 - Gemini CLI worker path: partial and depends on Gemini remote MCP support
 - Claude plugin setup helpers: supported for Claude Code
-- Claude dispatch channel: experimental
+- Claude dispatch channel: experimental, manual, and not auto-started by the default plugin
 - shell helper mode: fallback
 - OpenClaw migration docs: legacy
 
@@ -28,7 +28,7 @@ In this repository, a `Hand off test` means PREQ prepares an isolated auxiliary 
 - Claude Code worker-only mode: [docs/install-claude-code.md](docs/install-claude-code.md)
 - Codex: [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
 - Gemini CLI (partial): [docs/install-codex-gemini.md](docs/install-codex-gemini.md)
-- Experimental Claude dispatch channel: [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md)
+- Experimental Claude dispatch channel (manual): [docs/install-dispatch-channel.md](docs/install-dispatch-channel.md)
 - Shell helper fallback: [docs/install-shell-helper.md](docs/install-shell-helper.md)
 
 ## Project Docs
@@ -41,15 +41,15 @@ In this repository, a `Hand off test` means PREQ prepares an isolated auxiliary 
 
 ## Prerequisites
 
-- Claude plugin and dispatch runtime users need Node 18+ on PATH
-- Claude plugin users still need the remote PREQ MCP server, but `/preqstation:setup` can add or verify it for you
+- Manual dispatch runtime users need Node 18+ on PATH
+- Claude plugin users need the remote PREQ MCP server, but `/preqstation:setup` can add or verify it for you
 
 ## MCP Surfaces
 
 | Server | Transport | Purpose | Required |
 | --- | --- | --- | --- |
 | `preqstation` | remote HTTP MCP | PREQ task tools and OAuth-backed `/mcp` access | yes |
-| `preq-dispatch-channel` | local stdio MCP | experimental Claude-only dispatch runtime bundled by the plugin | optional |
+| `preq-dispatch-channel` | local stdio MCP | experimental Claude-only dispatch runtime, manual only | optional |
 
 ## Quick Start
 
@@ -113,6 +113,12 @@ If PREQSTATION already works in one of your runtimes and you only want the lates
 claude plugin marketplace update preqstation
 claude plugin update preqstation@preqstation
 claude plugin list
+```
+
+Starting in `0.1.34`, the default Claude plugin no longer auto-registers the experimental dispatch watcher. If you previously ran the old watcher and still see repeated `preq_list_tasks` or `preq_list_dispatch_requests` logs, stop the stale local process once:
+
+```bash
+pkill -f preq-dispatch-channel-server.mjs
 ```
 
 Then open Claude and refresh setup if needed:
@@ -181,16 +187,20 @@ claude plugin marketplace update preqstation
 claude plugin update preqstation@preqstation
 ```
 
-Start the experimental Claude dispatch runtime for a Hand off test:
+The public Claude plugin does not auto-start the experimental dispatch runtime. For production dispatch, use the separate OpenClaw path for now.
+
+For contributor-only manual testing of the local Claude dispatch runtime:
 
 ```bash
-claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
+claude --mcp-config /absolute/path/to/preqstation-skill/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 ```
 
 Debug the dispatch runtime:
 
 ```bash
-PREQSTATION_DEBUG_QUEUE=1 claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
+PREQSTATION_DEBUG_QUEUE=1 claude --mcp-config /absolute/path/to/preqstation-skill/mcp-dev.json --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 ```
 
 During the current Claude Channels research preview, do not add `--channels plugin:preqstation@preqstation` to the dispatch runtime command above.
@@ -202,8 +212,8 @@ OAuth starts when the client first makes a real request to `/mcp`.
 - Codex often starts login during `mcp add` because it probes the server immediately.
 - Claude Code usually stores the server first and starts OAuth on first real use.
 - If Claude keeps asking you to authenticate `preqstation` after restarts, check for multiple local or project-scoped `preqstation` entries and prefer a single user-scoped registration.
-- The local dispatch runtime keeps its own OAuth cache in `~/.preqstation-dispatch/oauth.json` and opens the PREQ OAuth page in your browser automatically when it needs a dispatch-specific token.
-- If the dispatcher cannot resolve the PREQ MCP URL from Claude config, start it with an explicit override such as `PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation`.
+- The manual local dispatch runtime keeps its own OAuth cache in `~/.preqstation-dispatch/oauth.json` and opens the PREQ OAuth page in your browser automatically when it needs a dispatch-specific token.
+- If the dispatcher cannot resolve the PREQ MCP URL from Claude config, start it with `PREQSTATION_MCP_URL=https://<your-domain>/mcp` in the environment.
 
 ## Release Model
 

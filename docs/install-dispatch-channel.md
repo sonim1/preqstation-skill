@@ -1,6 +1,6 @@
 # Install the Experimental Dispatch Channel
 
-Use this path when you want to test the local Claude dispatch channel that lives in this repository.
+Use this contributor-only path when you want to test the local Claude dispatch channel that lives in this repository.
 
 In this repository, a `Hand off test` means the dispatcher creates or reuses an auxiliary worktree on the requested branch, links local runtime env files into that worktree when needed, and hands the task off to the requested engine there.
 
@@ -8,6 +8,8 @@ This runtime requires Node 18+ on PATH because the bundled server is launched wi
 
 This runtime is Claude Code only. Codex and Gemini CLI do not run the local Claude channel server.
 The Claude dispatcher can still launch queued tasks whose requested engine is `codex` or `gemini-cli`.
+
+The default installed Claude plugin does not auto-register this runtime as an MCP server. That keeps normal plugin installs from running a background `/mcp` poller.
 
 Current status:
 
@@ -40,7 +42,7 @@ export PREQSTATION_MCP_URL="https://<your-domain>/mcp"
 export PREQSTATION_REPO_ROOTS="$HOME/projects:$HOME/work"
 ```
 
-Installed plugin mode already provides default poll interval and callback port values from the plugin manifest.
+The checked-in `mcp-dev.json` provides default poll interval and callback port values for manual testing.
 
 If your repos are not under the default roots, either set `PREQSTATION_REPO_ROOTS` or create `~/.preqstation-dispatch/projects.json` manually:
 
@@ -54,25 +56,20 @@ If your repos are not under the default roots, either set `PREQSTATION_REPO_ROOT
 
 If the plugin is installed, `/preqstation:setup` can add or verify the PREQ MCP entry for you and manage this mapping file.
 
-## Installed Plugin Mode
+## Manual Local Checkout Mode
 
-Install the plugin first:
-
-```bash
-claude plugin marketplace add https://github.com/sonim1/preqstation-skill
-claude plugin install preqstation@preqstation
-```
-
-Then start the dispatcher session for a Hand off test:
+Clone or update this repository, then start a dedicated dispatcher session from the local checkout:
 
 ```bash
-claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
+claude --mcp-config /absolute/path/to/preqstation-skill/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 ```
 
 Debug mode:
 
 ```bash
-claude --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
+claude --mcp-config /absolute/path/to/preqstation-skill/mcp-dev.json --debug mcp --debug-file /tmp/preqstation-dispatch-debug.log --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 tail -f /tmp/preqstation-dispatch-debug.log
 ```
 
@@ -81,10 +78,17 @@ During the current Claude Channels research preview, do not add `--channels plug
 If URL discovery fails, launch with an explicit override:
 
 ```bash
-PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --dangerously-skip-permissions --dangerously-load-development-channels plugin:preqstation@preqstation
+export PREQSTATION_SKILL_ROOT="/absolute/path/to/preqstation-skill"
+PREQSTATION_MCP_URL=https://<your-domain>/mcp claude --mcp-config /absolute/path/to/preqstation-skill/mcp-dev.json --dangerously-skip-permissions --dangerously-load-development-channels server:preq-dispatch-channel
 ```
 
-For contributor-only repo development mode, keep the `mcp-dev.json` flow in [../CONTRIBUTING.md](../CONTRIBUTING.md) rather than this user guide.
+Stop stale watcher processes after manual tests:
+
+```bash
+pkill -f preq-dispatch-channel-server.mjs
+```
+
+Production OpenClaw dispatch still lives in the separate `preqstation-openclaw` repository.
 
 ## OAuth
 

@@ -14,6 +14,13 @@ claude plugin update preqstation@preqstation
 ```
 
 Explain that this updates the marketplace source and then refreshes the installed plugin from that source.
+Mention that current plugin installs do not auto-start the experimental dispatch watcher.
+
+If the user previously tested the old watcher and still sees repeated `preq_list_tasks` or `preq_list_dispatch_requests` logs, suggest stopping the stale process once:
+
+```bash
+pkill -f preq-dispatch-channel-server.mjs
+```
 
 If the user asks how to confirm the installed version, suggest:
 
