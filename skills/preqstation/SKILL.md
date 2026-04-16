@@ -63,8 +63,8 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
 | `preq_update_task_note`     | Record `engine` while replacing the task note markdown without changing workflow status                              |
 | `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
-| `preq_list_dispatch_requests` | Read-only; inspect explicit dispatch requests used for Claude/OpenClaw ask parity and project-level insight        |
-| `preq_update_dispatch_request` | Dispatch-channel only; mark an explicit dispatch request as `dispatched` or `failed` after launch succeeds/fails |
+| `preq_list_dispatch_requests` | Read-only; inspect explicit dispatch requests used by launcher runtimes for ask parity and project-level insight |
+| `preq_update_dispatch_request` | Launcher runtime only; mark an explicit dispatch request as `dispatched` or `failed` after launch succeeds or fails |
 | `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
 | `preq_review_task`          | Record `engine` running verification, send lifecycle action `review`; backend moves → `done` and clears `run_state`  |
 | `preq_block_task`           | Record `engine` reporting the block, send lifecycle action `block`; backend moves → `hold` and clears `run_state`    |

@@ -1,7 +1,7 @@
 {
   "name": "preqstation",
   "metadata": {
-    "description": "PREQSTATION Claude Code plugin and worker skill."
+    "description": "PREQSTATION Claude Code helper plugin and worker skill."
   },
   "owner": {
     "name": "PREQSTATION"

@@ -21,11 +21,6 @@ Then route by intent:
   - use `docs/install-claude-code.md`
 - Codex or Gemini worker mode:
   - use `docs/install-codex-gemini.md`
-- Experimental Claude dispatch runtime:
-  - describe this as the `Hand off test` flow
-  - explain that the default installed Claude plugin no longer auto-starts this watcher
-  - route production dispatcher users to OpenClaw for now
-  - point contributor/manual testers to `docs/install-dispatch-channel.md`
 - Shell helper fallback:
   - use `docs/install-shell-helper.md`
 - OpenClaw migration or production dispatcher questions:
@@ -33,7 +28,5 @@ Then route by intent:
 
 Rules:
 
-- Do not present `/preqstation:help` as a replacement for the actual dispatch runtime entrypoint.
 - Do not send users to `/preqstation:start-dispatch`; that helper no longer exists.
-- Do not claim that `claude --dangerously-load-development-channels plugin:preqstation@preqstation` starts the watcher in current plugin installs.
 - Be explicit that OpenClaw production dispatch is still separate today.

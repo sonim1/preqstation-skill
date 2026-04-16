@@ -12,15 +12,12 @@ Current repository responsibilities:
 - remote PREQ `/mcp` setup guidance
 - shell helper fallback
 - Claude plugin setup helpers and marketplace install path
-- experimental local Claude dispatch channel runtime
-- the `Hand off test` flow for branch-scoped worktree handoff
 
 Current support status:
 
 - worker skill + remote PREQ MCP: stable for Claude Code and Codex
 - Gemini CLI worker path: partial and depends on Gemini remote MCP support
 - Claude plugin setup helpers: supported for Claude Code
-- Claude dispatch channel: experimental and manual; not auto-started by the default plugin
 - shell helper mode: fallback
 - OpenClaw migration docs: legacy
 

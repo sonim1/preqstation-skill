@@ -13,9 +13,8 @@ Rules:
 - Ask only for the information needed to complete project mapping in the current environment.
 - Prefer remote PREQ `/mcp` with OAuth over shell helper mode.
 - For Claude Code, prefer the plugin install path unless the user explicitly wants worker-only mode without plugin helpers.
-- For Claude plugin or Claude dispatch setup, treat `~/.preqstation-dispatch/projects.json` as the canonical local project mapping store.
+- Treat `~/.preqstation-dispatch/projects.json` as the canonical local project mapping store for current local PREQ tooling.
 - Do not store project path mappings inside this repository, `.claude-plugin`, or `.claude/settings.local.json`.
-- Do not claim that Claude dispatch has already migrated into this repository.
 - If the user wants the current production OpenClaw dispatcher, direct them to the migration guidance and explain that `preqstation-openclaw` is still the active dispatcher today.
 - Only redirect into other install docs when the user explicitly asks for installation help or when required prerequisites are clearly missing.
 - Even if mappings already exist, allow the user to refresh or replace them. Treat `/preqstation:setup` as rerunnable update flow, not one-time bootstrap.

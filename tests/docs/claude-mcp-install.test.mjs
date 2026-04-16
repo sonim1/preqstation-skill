@@ -6,18 +6,16 @@ const USER_SCOPE_COMMAND =
   /claude mcp add -s user --transport http preqstation https:\/\/<your-domain>\/mcp/;
 
 test('Claude-facing docs standardize on a single user-scoped preqstation MCP command', async () => {
-  const [readme, pluginDoc, workerDoc, dispatchDoc, canonicalSkill] = await Promise.all([
+  const [readme, pluginDoc, workerDoc, canonicalSkill] = await Promise.all([
     fs.readFile(new URL('../../README.md', import.meta.url), 'utf8'),
     fs.readFile(new URL('../../docs/install-claude-plugin.md', import.meta.url), 'utf8'),
     fs.readFile(new URL('../../docs/install-claude-code.md', import.meta.url), 'utf8'),
-    fs.readFile(new URL('../../docs/install-dispatch-channel.md', import.meta.url), 'utf8'),
     fs.readFile(new URL('../../SKILL.md', import.meta.url), 'utf8'),
   ]);
 
   assert.match(readme, USER_SCOPE_COMMAND);
   assert.match(pluginDoc, USER_SCOPE_COMMAND);
   assert.match(workerDoc, USER_SCOPE_COMMAND);
-  assert.match(dispatchDoc, USER_SCOPE_COMMAND);
   assert.match(canonicalSkill, USER_SCOPE_COMMAND);
 });
 

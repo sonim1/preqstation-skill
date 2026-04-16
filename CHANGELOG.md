@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.35 - 2026-04-16
+
+- Removed the experimental Claude-specific local dispatch runtime, bundle, and contributor-only watcher config from this repository.
+- Simplified the package back to the worker skill, Claude helper plugin, and OpenClaw migration guidance only.
+
 ## 0.1.34 - 2026-04-15
 
 - Removed the default Claude plugin dispatch-channel MCP server so installing or updating the plugin no longer starts a background PREQ queue poller.

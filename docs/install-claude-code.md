@@ -42,6 +42,5 @@ You should be able to:
 ## Notes
 
 - Prefer MCP mode over shell helper mode.
-- This path does not include `/preqstation:setup`, `/preqstation:status`, or the experimental Claude dispatch runtime.
+- This path does not include `/preqstation:setup` or the Claude plugin helper commands.
 - If you want the recommended Claude Code plugin experience, use [install-claude-plugin.md](install-claude-plugin.md).
-- The Claude Channels dispatcher migration into this repository is planned, but not yet the default production path.
