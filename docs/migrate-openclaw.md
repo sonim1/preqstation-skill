@@ -1,15 +1,17 @@
 # OpenClaw Migration Status
 
-`preqstation-openclaw` is still the current production dispatcher for OpenClaw and Telegram-driven PREQ dispatch.
+`preqstation-dispatcher` is the current durable public dispatcher repo for OpenClaw and Telegram-driven PREQ dispatch.
+
+Some older runtime, package, plugin, or config identifiers may still mention `preqstation-openclaw` for compatibility. Treat that as legacy technical naming, not the preferred public repo name.
 
 ## Today
 
 Use:
 
 - `preqstation-skill` for worker-side PREQ skill and MCP setup
-- `preqstation-openclaw` for the installed OpenClaw dispatcher
+- `preqstation-dispatcher` for the installed OpenClaw dispatcher
 
-Stay on `preqstation-openclaw` today if you rely on:
+Stay on `preqstation-dispatcher` today if you rely on:
 
 - the production OpenClaw or Telegram ingress path
 - a non-experimental dispatcher setup
@@ -22,7 +24,7 @@ This repository no longer ships a Claude-specific local dispatcher.
 That means:
 
 - do not expect Claude plugin updates here to start a background dispatcher
-- do not replace your current `preqstation-openclaw` install with this repository
+- do not replace your current `preqstation-dispatcher` install with this repository
 - keep treating OpenClaw dispatch as a separate setup today
 
 ## Planned direction

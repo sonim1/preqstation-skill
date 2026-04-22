@@ -8,7 +8,12 @@ This repository covers three surfaces:
 - remote PREQ `/mcp` setup for Claude Code, Codex, and Gemini CLI
 - a Claude plugin with setup/status/update/help commands
 
-OpenClaw production dispatch still lives in the separate `preqstation-openclaw` repository. This repository no longer ships a Claude-specific local dispatcher.
+OpenClaw production dispatch still lives in the separate `preqstation-dispatcher` repository. This repository no longer ships a Claude-specific local dispatcher.
+
+Important naming note:
+- the durable public dispatcher repo name is `preqstation-dispatcher`
+- some package, plugin, or config identifiers in older docs or runtimes may still mention `preqstation-openclaw`
+- treat `preqstation-openclaw` as a technical legacy identifier unless a command explicitly requires it
 
 ## Support Status
 
@@ -147,14 +152,14 @@ codex mcp add preqstation --url https://<your-domain>/mcp
 
 ### OpenClaw
 
-OpenClaw production dispatch currently lives in the separate `preqstation-openclaw` repository.
+OpenClaw production dispatch currently lives in the separate `preqstation-dispatcher` repository.
 
 If you use that path, update the linked plugin there:
 
 ```bash
-openclaw plugins install --link --dangerously-force-unsafe-install /Users/kendrick/projects/preqstation-openclaw
+openclaw plugins install --link --dangerously-force-unsafe-install /Users/kendrick/projects/preqstation-dispatcher
 openclaw gateway restart
-openclaw plugins inspect preqstation-openclaw
+openclaw plugins inspect preqstation-dispatcher
 ```
 
 After the restart, refresh project mappings if needed with the copied `/preqsetup auto ...` command from Projects or run `/preqsetup status` in OpenClaw to verify mappings.
