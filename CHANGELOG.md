@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.37 - 2026-04-25
+
+- Clarified that `feature_branch` auto-PR flows can use authenticated GitHub access through either `gh auth` or GitHub MCP.
+- Documented that `feature_branch + auto_pr + commit_on_review` must block completion until both the pushed branch name and PR URL are available.
+
 ## 0.1.36 - 2026-04-16
 
 - Added concrete Gemini CLI MCP install and verification commands to the public install docs and packaged worker skill.
