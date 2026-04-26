@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.40 - 2026-04-26
+
+- Prioritized the task note and temporary `Ask:` block over mixed-language titles when workers choose the language for PREQ-facing updates.
+- Kept acceptance criteria and project instructions as fallback hints so git-facing artifacts still stay in English by default.
+
 ## 0.1.39 - 2026-04-26
 
 - Added a task-facing language rule so workers write PREQ plans, note rewrites, completion notes, review notes, QA reports, and blocked reasons in the dominant language of the current card content.
