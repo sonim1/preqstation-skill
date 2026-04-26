@@ -98,9 +98,9 @@ Load -> Initialize -> Execute -> Finalize
 - When Task ID is present and the task is active, MUST call `preq_start_task`.
 - When Task ID is absent for project-level objectives such as `insight`, skip task lifecycle reads/writes and treat the prompt metadata plus project key as the source of truth.
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
-- Resolve the task-facing content language once near the start of the run by inspecting the current task title, note, acceptance criteria, and any temporary trailing `Ask:` helper block when present.
-- Use the dominant language of that task content for PREQ-facing written updates such as plan markdown, rewritten task notes, completion summaries and notes, review notes, block reasons, QA reports, and newly created task content.
-- Use project `agent_instructions` only as a tie-breaker when the task content itself is mixed or ambiguous. The current task content takes precedence.
+- Resolve the task-facing content language once near the start of the run by inspecting the current task note and any temporary trailing `Ask:` helper block first, then acceptance criteria, and only using the task title as a weak tie-breaker.
+- Use the dominant language of that note-centric task content for PREQ-facing written updates such as plan markdown, rewritten task notes, completion summaries and notes, review notes, block reasons, QA reports, and newly created task content.
+- Use project `agent_instructions` only as a final tie-breaker when the task note, `Ask:` block, and acceptance criteria are still mixed or ambiguous. The current task content takes precedence.
 - If no dominant language is clear, default PREQ-facing written updates to English.
 
 3. Execute the user objective
