@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.38 - 2026-04-26
+
+- Defaulted `feature_branch + auto_pr` runs to non-draft pull requests instead of leaving draft-vs-ready behavior implicit.
+- Instructed workers to convert accidentally created draft PRs to ready for review before completing PREQ tasks.
+
 ## 0.1.37 - 2026-04-25
 
 - Clarified that `feature_branch` auto-PR flows can use authenticated GitHub access through either `gh auth` or GitHub MCP.

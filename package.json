@@ -1,6 +1,6 @@
 {
   "name": "preqstation-skill",
-  "version": "0.1.37",
+  "version": "0.1.38",
   "description": "PREQSTATION worker skill and Claude Code helper plugin",
   "private": true,
   "type": "module",

@@ -222,6 +222,13 @@ Behavior by `strategy`:
   # if auto_pr=true: create PR via GitHub MCP or gh CLI and capture the PR URL
   ```
 
+PR creation rule for `feature_branch + auto_pr`:
+
+- Default to a non-draft PR.
+- Do not create a draft PR unless the user explicitly asked for a draft PR, or the task is intentionally being handed off in an incomplete/blocked state.
+- If the available GitHub tool or CLI flow creates a draft PR by default, immediately convert it to "ready for review" before calling `preq_complete_task`.
+- Always capture the final non-draft PR URL that will actually be reviewed.
+
 Rule for `commit_on_review`:
 
 - if `true` and strategy is `direct_commit` or `feature_branch`, do not move task to `ready` until remote push is verified.
@@ -232,13 +239,15 @@ Required completion rule for `feature_branch + auto_pr + commit_on_review`:
 - Treat both the pushed branch name and the PR URL as required before `preq_complete_task`.
 - Preferred order:
   1. push `worktree_branch`
-  2. create the PR
-  3. capture the PR URL
-  4. call `preq_complete_task` with both `branchName` and `prUrl`
+  2. create a non-draft PR
+  3. if a draft PR was created implicitly, convert it to ready for review
+  4. capture the PR URL
+  5. call `preq_complete_task` with both `branchName` and `prUrl`
 - If GitHub access is unavailable, branch push fails, PR creation fails, or the PR URL cannot be captured, call `preq_block_task` with the exact missing prerequisite and the next operator action.
 - Good block reasons are concrete, for example:
   - `Auto PR required before ready, but gh is not authenticated on the coding agent. Run gh auth login or configure GitHub MCP, then resume.`
   - `Auto PR required before ready, but gh pr create failed after pushing task/proj-123/example. Fix the GitHub error and resume.`
+  - `Auto PR required before ready, but the PR is still a draft. Mark it ready for review, capture the final PR URL, then resume.`
 
 ## Shell Helper Mode (Optional)
 
