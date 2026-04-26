@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.39 - 2026-04-26
+
+- Added a task-facing language rule so workers write PREQ plans, note rewrites, completion notes, review notes, QA reports, and blocked reasons in the dominant language of the current card content.
+- Kept git-facing artifacts such as commit messages, pull request titles and bodies, and branch names defaulting to English even when PREQ-facing updates use another language.
+
 ## 0.1.38 - 2026-04-26
 
 - Defaulted `feature_branch + auto_pr` runs to non-draft pull requests instead of leaving draft-vs-ready behavior implicit.
