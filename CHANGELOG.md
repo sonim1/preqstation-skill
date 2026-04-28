@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.41 - 2026-04-28
+
+- No functional skill changes in this release; bumped package metadata so the current task-language guidance ships as a fresh GitHub-based marketplace update.
+
 ## 0.1.40 - 2026-04-26
 
 - Prioritized the task note and temporary `Ask:` block over mixed-language titles when workers choose the language for PREQ-facing updates.
