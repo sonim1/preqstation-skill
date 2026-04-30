@@ -1,7 +1,7 @@
 {
   "name": "preqstation",
   "description": "PREQSTATION Claude Code helper plugin and worker skill",
-  "version": "0.1.43",
+  "version": "0.1.44",
   "author": {
     "name": "PREQSTATION"
   },

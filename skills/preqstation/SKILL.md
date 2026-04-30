@@ -63,7 +63,7 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
 | `preq_get_task`             | Read-only, no engine needed                                                                                          |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |
-| `preq_list_task_comments`   | Read-only; inspect task comments when a comment objective needs surrounding discussion context                        |
+| `preq_list_task_comments`   | Read-only; for `comment` objectives, fetch task comments as conversation history/reference around the target comment |
 | `preq_get_task_comment`     | Read-only; fetch the exact comment being handled before replying or changing comment state                           |
 | `preq_update_qa_run`        | Read-only from task lifecycle perspective; updates branch-level QA run status/report without task transitions        |
 | `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
@@ -137,10 +137,12 @@ Load -> Initialize -> Execute -> Finalize
 - Else If user objective start with `comment`:
   - Handle the referenced task comment only; preserve the task workflow status for the entire run.
   - Treat comments as a conversational request channel, not as implementation source of truth. A comment affects future implementation only if this comment objective explicitly promotes it into the task note/spec with `preq_update_task_note`.
-  - MUST call `preq_get_task` and `preq_get_task_comment` at the start to fetch task details, the current note, workflow status, existing run state, and the exact comment being handled.
+  - MUST call `preq_get_task`, `preq_get_task_comment`, and `preq_list_task_comments` at the start to fetch task details, the current note, workflow status, existing run state, the exact comment being handled, and the surrounding task-scoped comment conversation.
+  - Treat the referenced `comment_id` as the primary request for this run. Other user, agent, and system comments are conversation history/reference only, including prior AI replies; use them to understand flow and avoid contradictory or context-blind responses.
+  - Do not treat non-target comments as independent actionable requirements. They affect future implementation only after the current target comment explicitly or unambiguously asks you to promote the conversational decision into the task note/spec with `preq_update_task_note`.
   - MUST NOT call `preq_start_task`; comments use comment state rather than task `run_state` claiming.
   - Mark the original comment `working` with `preq_update_task_comment_state` before substantive work.
-  - Inspect the current task note and the relevant comments before deciding how to respond. Use `preq_list_task_comments` when the requested comment or task context implies prior discussion is relevant.
+  - Inspect the current task note, target comment, and comment history before deciding how to respond.
   - Optionally call `preq_update_task_note` only when the comment explicitly requests a note, plan, or specification change. This is the only “promote comment to notes” path: convert the requested change into canonical note/spec language, then mention that the note was updated in the reply. Do not rewrite the note for a normal answer, acknowledgement, or implementation-review comment.
   - Reply with `preq_reply_task_comment` and set `noteUpdated` accurately to indicate whether `preq_update_task_note` was used.
   - Mark the original comment `done` with `preq_update_task_comment_state` after the reply succeeds.
@@ -168,14 +170,14 @@ Load -> Initialize -> Execute -> Finalize
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
-  - Use task notes, acceptance criteria, and explicit PREQ result context as the implementation source of truth. Do not fetch or interpret task comments as hidden requirements; comments affect implementation only after a prior comment objective updated the canonical task note/spec.
+  - Use task notes, acceptance criteria, and explicit PREQ result context as the implementation source of truth. Do not fetch or interpret task comments as hidden requirements or conversation context; comments affect implementation only after a prior comment objective updated the canonical task note/spec.
   - If `latest_preq_result` is present, use it to understand the latest blocked reason, prior summary, and most recent PREQ execution context before making changes.
   - Resolve deploy strategy via the Deployment Strategy Contract.
   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`. Follow the `Deployment Strategy Contract` section.
   - Do not stop for user approval or separate conversational design/spec loops mid-run.
 - Else If user objective start with `review`:
   - Run verification (`tests`, `build`, `lint`).
-  - Review against task notes and acceptance criteria, not raw task comments. Comments are conversational context unless already promoted into the note/spec.
+  - Review against task notes and acceptance criteria, not raw task comments. Do not fetch or interpret task comments as conversational context during review; comments matter to review only after a prior comment objective promoted them into the note/spec.
   - Call `preq_review_task` with review notes.
   - Do not request additional user approval or switch into a separate conversational workflow mid-run.
 

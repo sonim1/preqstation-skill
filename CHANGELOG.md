@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.44 - 2026-04-30
+
+- Made comment objectives always fetch task comment history around the target comment so previous user comments and AI replies are available as conversational context.
+- Clarified that the referenced `comment_id` remains the primary request and non-target comments are reference only, not independent implementation requirements.
+
 ## 0.1.43 - 2026-04-30
 
 - Clarified that task comments are conversational requests and only become implementation source of truth when a comment objective explicitly promotes them into the task note/spec.
