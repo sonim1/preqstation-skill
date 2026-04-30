@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.42 - 2026-04-30
+
+- Documented the task comment MCP tools and comment objective lifecycle, including comment state transitions, replies, optional note updates, status preservation, and failure handling.
+
 ## 0.1.41 - 2026-04-28
 
 - No functional skill changes in this release; bumped package metadata so the current task-language guidance ships as a fresh GitHub-based marketplace update.

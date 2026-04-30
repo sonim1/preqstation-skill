@@ -63,12 +63,16 @@ All mutation tools accept an optional `engine` parameter and always send an engi
 | `preq_list_tasks`           | Read-only, no engine needed                                                                                          |
 | `preq_get_task`             | Read-only, no engine needed                                                                                          |
 | `preq_get_project_settings` | Read-only, no engine needed (fetch project deploy settings by key)                                                   |
+| `preq_list_task_comments`   | Read-only; inspect task comments when a comment objective needs surrounding discussion context                        |
+| `preq_get_task_comment`     | Read-only; fetch the exact comment being handled before replying or changing comment state                           |
 | `preq_update_qa_run`        | Read-only from task lifecycle perspective; updates branch-level QA run status/report without task transitions        |
 | `preq_plan_task`            | Assign `engine`, send lifecycle action `plan`, backend moves inbox task to `todo` and clears `run_state`             |
 | `preq_create_task`          | Assign `engine` to new inbox task                                                                                    |
 | `preq_start_task`           | Record `engine` claiming the task; backend marks `run_state=working`                                                 |
 | `preq_update_task_note`     | Record `engine` while replacing the task note markdown without changing workflow status                              |
 | `preq_update_task_status`   | Record `engine` while updating workflow status-only endpoint (`/api/tasks/:id/status`)                               |
+| `preq_update_task_comment_state` | Record `engine` while marking a task comment `working`, `done`, or `failed` without changing task workflow status |
+| `preq_reply_task_comment`   | Record `engine` while replying to a task comment; backend creates work logs for comment replies/failures automatically |
 | `preq_list_dispatch_requests` | Read-only; inspect explicit dispatch requests used by launcher runtimes for ask parity and project-level insight |
 | `preq_update_dispatch_request` | Launcher runtime only; mark an explicit dispatch request as `dispatched` or `failed` after launch succeeds or fails |
 | `preq_complete_task`        | Record `engine` in work log result, send lifecycle action `complete`; backend moves → `ready` and clears `run_state` |
@@ -95,7 +99,7 @@ Load -> Initialize -> Execute -> Finalize
 
 - When Task ID is present, MUST call `preq_get_task` once at the start to fetch task details, acceptance criteria, workflow status, `run_state`, and the initial engine.
 - If `preq_get_task` returns `latest_preq_result`, read it before substantive work and treat it as previous execution context, especially for resumed or previously blocked tasks.
-- When Task ID is present and the task is active, MUST call `preq_start_task`.
+- When Task ID is present and the task is active, MUST call `preq_start_task`, except for `comment` objectives where task claiming is explicitly forbidden.
 - When Task ID is absent for project-level objectives such as `insight`, skip task lifecycle reads/writes and treat the prompt metadata plus project key as the source of truth.
 - In `debug` mode, create or refresh `preqstation-progress.md` after `preq_get_task` and update it after each major checkpoint.
 - Resolve the task-facing content language once near the start of the run by inspecting the current task note and any temporary trailing `Ask:` helper block first, then acceptance criteria, and only using the task title as a weak tie-breaker.
@@ -130,6 +134,18 @@ Load -> Initialize -> Execute -> Finalize
   - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs or artifact publishing skip note.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
+- Else If user objective start with `comment`:
+  - Handle the referenced task comment only; preserve the task workflow status for the entire run.
+  - MUST call `preq_get_task` and `preq_get_task_comment` at the start to fetch task details, the current note, workflow status, existing run state, and the exact comment being handled.
+  - MUST NOT call `preq_start_task`; comments use comment state rather than task `run_state` claiming.
+  - Mark the original comment `working` with `preq_update_task_comment_state` before substantive work.
+  - Inspect the current task note and the relevant comments before deciding how to respond. Use `preq_list_task_comments` when the requested comment or task context implies prior discussion is relevant.
+  - Optionally call `preq_update_task_note` only when the comment explicitly requests a note, plan, or specification change. Do not rewrite the note for a normal answer, acknowledgement, or implementation-review comment.
+  - Reply with `preq_reply_task_comment` and set `noteUpdated` accurately to indicate whether `preq_update_task_note` was used.
+  - Mark the original comment `done` with `preq_update_task_comment_state` after the reply succeeds.
+  - Never call `preq_complete_task`, `preq_review_task`, `preq_plan_task`, or `preq_block_task` for a comment objective.
+  - Do not create a separate work log for comment handling. The backend creates work logs automatically for comment replies and failure updates.
+  - On failure, preserve task workflow status, reply with the failure details using `preq_reply_task_comment` if possible, then mark the original comment `failed` with `preq_update_task_comment_state`. If replying is impossible, still mark the comment `failed` with the most concrete failure reason available.
 - Else If user objective start with `insight`:
   - Task ID may be absent for this branch. Do not invent one and do not call task lifecycle mutations when no task exists.
   - Inspect the local project from the current worktree and use the provided Insight Prompt only as task-generation guidance.
@@ -160,12 +176,13 @@ Load -> Initialize -> Execute -> Finalize
   - Call `preq_review_task` with review notes.
   - Do not request additional user approval or switch into a separate conversational workflow mid-run.
 
-On any failure in an active task branch, call `preq_block_task` with the blocking reason and stop.
+On any failure in an active task branch, call `preq_block_task` with the blocking reason and stop. This does not apply to `comment` objectives; use the comment failure lifecycle instead.
 On any failure in a QA branch, update the QA run to `failed` with a concise markdown report and stop.
 
 4. Finalize:
    On success for implementation/review branches, call `preq_complete_task` with summary, branch, and `pr_url` when applicable.
    On success for ask branches, do not call `preq_complete_task`; the successful note rewrite ends after `preq_update_task_note` plus `preq_update_task_status` using the unchanged workflow status.
+   On success for comment branches, do not call task completion, review, plan, or block tools; the successful comment response ends after `preq_reply_task_comment` plus marking the original comment `done`.
    On success for insight branches, stop after the Inbox tasks are created; do not call `preq_complete_task` or mutate existing task workflow state.
 
 ## Deployment Strategy Contract (required)
