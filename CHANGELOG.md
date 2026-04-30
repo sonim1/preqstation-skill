@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.43 - 2026-04-30
+
+- Clarified that task comments are conversational requests and only become implementation source of truth when a comment objective explicitly promotes them into the task note/spec.
+
 ## 0.1.42 - 2026-04-30
 
 - Documented the task comment MCP tools and comment objective lifecycle, including comment state transitions, replies, optional note updates, status preservation, and failure handling.

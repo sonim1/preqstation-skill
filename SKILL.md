@@ -136,11 +136,12 @@ Load -> Initialize -> Execute -> Finalize
   - The final saved note must not include the temporary `Ask:` helper block.
 - Else If user objective start with `comment`:
   - Handle the referenced task comment only; preserve the task workflow status for the entire run.
+  - Treat comments as a conversational request channel, not as implementation source of truth. A comment affects future implementation only if this comment objective explicitly promotes it into the task note/spec with `preq_update_task_note`.
   - MUST call `preq_get_task` and `preq_get_task_comment` at the start to fetch task details, the current note, workflow status, existing run state, and the exact comment being handled.
   - MUST NOT call `preq_start_task`; comments use comment state rather than task `run_state` claiming.
   - Mark the original comment `working` with `preq_update_task_comment_state` before substantive work.
   - Inspect the current task note and the relevant comments before deciding how to respond. Use `preq_list_task_comments` when the requested comment or task context implies prior discussion is relevant.
-  - Optionally call `preq_update_task_note` only when the comment explicitly requests a note, plan, or specification change. Do not rewrite the note for a normal answer, acknowledgement, or implementation-review comment.
+  - Optionally call `preq_update_task_note` only when the comment explicitly requests a note, plan, or specification change. This is the only “promote comment to notes” path: convert the requested change into canonical note/spec language, then mention that the note was updated in the reply. Do not rewrite the note for a normal answer, acknowledgement, or implementation-review comment.
   - Reply with `preq_reply_task_comment` and set `noteUpdated` accurately to indicate whether `preq_update_task_note` was used.
   - Mark the original comment `done` with `preq_update_task_comment_state` after the reply succeeds.
   - Never call `preq_complete_task`, `preq_review_task`, `preq_plan_task`, or `preq_block_task` for a comment objective.
@@ -167,12 +168,14 @@ Load -> Initialize -> Execute -> Finalize
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.
+  - Use task notes, acceptance criteria, and explicit PREQ result context as the implementation source of truth. Do not fetch or interpret task comments as hidden requirements; comments affect implementation only after a prior comment objective updated the canonical task note/spec.
   - If `latest_preq_result` is present, use it to understand the latest blocked reason, prior summary, and most recent PREQ execution context before making changes.
   - Resolve deploy strategy via the Deployment Strategy Contract.
   - Perform the required git/deploy steps for `direct_commit`, `feature_branch`, or `none`. Follow the `Deployment Strategy Contract` section.
   - Do not stop for user approval or separate conversational design/spec loops mid-run.
 - Else If user objective start with `review`:
   - Run verification (`tests`, `build`, `lint`).
+  - Review against task notes and acceptance criteria, not raw task comments. Comments are conversational context unless already promoted into the note/spec.
   - Call `preq_review_task` with review notes.
   - Do not request additional user approval or switch into a separate conversational workflow mid-run.
 
