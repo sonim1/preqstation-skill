@@ -43,6 +43,12 @@ gemini mcp add --scope user --transport http preqstation https://<your-domain>/m
 gemini mcp list
 ```
 
+If the list still shows `preqstation` as `Disconnected`, open Gemini and complete OAuth there:
+
+```text
+/mcp auth preqstation
+```
+
 ### 4. Run Gemini
 
 ```bash
@@ -63,5 +69,6 @@ PREQ task `engine` values must match the worker:
 
 - Install the skill only on the runtimes that should own PREQ execution.
 - Prefer MCP mode when available.
+- Gemini CLI may require a separate in-session `/mcp auth preqstation` step even after `gemini mcp add ...`.
 - If your installed Gemini CLI does not expose remote HTTP MCP, use the shell helper fallback instead.
 - Codex and Gemini CLI do not need a Claude-style dispatch server here. Keep using the worker + MCP flow unless you are explicitly testing Claude Code dispatch.

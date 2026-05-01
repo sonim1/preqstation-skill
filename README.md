@@ -102,6 +102,12 @@ gemini mcp add --scope user --transport http preqstation https://<your-domain>/m
 gemini mcp list
 ```
 
+If `gemini mcp list` shows `preqstation` as `Disconnected`, finish OAuth inside an interactive Gemini session:
+
+```text
+/mcp auth preqstation
+```
+
 Gemini CLI uses the same worker + remote MCP path when the local CLI exposes remote HTTP MCP. If it does not, fall back to the shell helper path.
 
 ## Update Existing Install

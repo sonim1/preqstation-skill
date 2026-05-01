@@ -19,7 +19,7 @@ Recommended MCP mode:
   - Gemini CLI: `gemini mcp add --scope user --transport http preqstation https://<your-domain>/mcp`
 - OAuth starts when the client first makes a real request to `/mcp`
 - Codex often triggers login during `add` because it probes the server immediately
-- Gemini CLI may also prompt for auth during MCP registration or first real tool call
+- Gemini CLI may also prompt for auth during MCP registration or first real tool call. If `gemini mcp list` still shows `preqstation` as `Disconnected`, open an interactive Gemini session and run `/mcp auth preqstation`.
 - Claude Code usually stores the config first and may show `Needs authentication` until first use or `claude mcp get preqstation`
 - Prefer one user-scoped Claude Code PREQ registration so you do not accumulate duplicate project-local entries
 - Verify MCP registration with `claude mcp list`, `codex mcp list`, or `gemini mcp list`
