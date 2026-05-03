@@ -2,6 +2,11 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.45 - 2026-05-02
+
+- Clarified that PREQ project deploy settings are explicit run authorization for required commit, push, and PR actions.
+- Prevented workers from blocking feature-branch auto-PR flows solely because generic coding-agent defaults discourage autonomous git operations.
+
 ## 0.1.44 - 2026-04-30
 
 - Made comment objectives always fetch task comment history around the target comment so previous user comments and AI replies are available as conversational context.

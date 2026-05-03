@@ -89,6 +89,7 @@ Do not skip, reorder, combine, or substitute lifecycle actions.
 PREQ launcher-driven runs are non-interactive by default.
 You may use process skills such as `brainstorming` or `writing-plans` only as internal guidance while continuing the PREQ lifecycle in the same run.
 Do not stop to ask the user for approval, clarifications, or design feedback mid-run unless PREQ tools are unavailable or the prompt/worktree/task state is invalid.
+Project deploy settings are explicit operator authorization for this PREQ run. When `deploy_strategy` requires commit, push, or PR work, perform those git/GitHub actions without asking for separate approval.
 
 Load -> Initialize -> Execute -> Finalize
 
@@ -222,6 +223,8 @@ Default when absent/invalid:
 Behavior by `strategy`:
 
 - `none`: do not run git commit/push/PR. Only code changes + task update result.
+
+- `direct_commit` and `feature_branch` are authorized git-operation modes. Do not block solely because general coding-agent defaults discourage autonomous commits, pushes, or PRs; the PREQ project deploy strategy is the approval source for this run.
 
 - Git-facing artifacts must default to English even when PREQ-facing task updates use another language. This includes commit messages, PR titles, PR bodies, branch names, and other repository-facing metadata.
 
