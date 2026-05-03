@@ -17,7 +17,10 @@ test('skill docs allow private artifact publishing for ask and qa', async () => 
     assert.match(doc, /authenticated Fast\.io MCP session|authenticated provider/i);
     assert.match(doc, /HTML prototype|HTML mockup/i);
     assert.match(doc, /screenshot/i);
-    assert.match(doc, /Artifacts:/i);
+    assert.match(doc, /structured `artifacts` field|artifacts` field|artifacts` array/i);
+    assert.match(doc, /preq_update_task_note\(noteMarkdown=\.\.\., artifacts=\[\.\.\.\]\)/);
+    assert.match(doc, /preq_update_qa_run/i);
+    assert.match(doc, /not (?:the )?markdown report body/i);
     assert.match(doc, /7-day|one week|1 week|604800/i);
     assert.match(doc, /access=quickshare/i);
     assert.match(doc, /expires=/i);
@@ -45,7 +48,10 @@ test('artifact publishing guide documents Fast.io setup and secure open behavior
   assert.match(artifactDoc, /7-day|one week|1 week|604800/i);
   assert.match(artifactDoc, /access=quickshare/i);
   assert.match(artifactDoc, /expires=/i);
+  assert.match(artifactDoc, /preq_update_task_note|preq_complete_task|preq_update_qa_run/i);
+  assert.match(artifactDoc, /structured `artifacts` arrays|`artifacts` array/i);
   assert.match(artifactDoc, /publish(?:ing)? result or skip reason|skip reason/i);
+  assert.match(artifactDoc, /localPath/i);
   assert.match(artifactDoc, /localhost|127\.0\.0\.1/i);
   assert.match(artifactDoc, /Open in Fast\.io|secure external open/i);
 });

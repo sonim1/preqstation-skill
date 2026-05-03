@@ -129,10 +129,11 @@ Load -> Initialize -> Execute -> Finalize
   - Durable artifact links must use a `private-or-skip` policy. Authenticated workspace targets, member-restricted shares, and registered-account shares count as acceptable private access. Skip non-expiring `anyone with the link` URLs or other public-link-only modes.
   - If the provider can create temporary external share or quickshare links, create 7-day expiring reviewer links for the published artifacts. Mark them with `access=quickshare` or the provider's equivalent and include `expires=...`; do not create non-expiring public links.
   - If the local artifact is an HTML prototype or HTML mockup, generate at least one screenshot PNG for review, then attempt to publish both the HTML source and screenshot artifact when an authenticated provider is available.
-  - Record published links under an `Artifacts:` markdown block using lines like `- [image] Desktop screenshot | provider=fastio | access=quickshare | expires=2026-04-18T00:00:00Z | url=...` and `- [document] HTML prototype | provider=fastio | access=private-workspace | url=...`.
-  - For prototype or reviewable artifact asks, record the artifact publishing result or skip reason in the note. If publishing is skipped, include the local artifact path and a concise reason such as provider unavailable, unauthenticated, or no safe target.
+  - Do not write artifact metadata into an `Artifacts:` markdown block. Keep the task note focused on durable task context.
+  - Record published links or skipped/local artifacts in the `artifacts` array passed to `preq_update_task_note`. Use objects with `type`, `title`, `url`, `provider`, `access`, `expires`, `localPath`, `reason`, and optional `metadata` as applicable.
+  - For prototype or reviewable artifact asks, include the artifact publishing result or skip reason in `artifacts`. If publishing is skipped, include the local artifact path and a concise `reason` such as provider unavailable, unauthenticated, or no safe target.
   - Treat localhost and `127.0.0.1` URLs as local-only diagnostics. Do not present them as the only review link; either publish a private artifact URL or explicitly mark the artifact as local-only with the skip reason.
-  - Persist the rewritten markdown with `preq_update_task_note`, including any published artifact URLs or artifact publishing skip note.
+  - Persist the rewritten markdown with `preq_update_task_note(noteMarkdown=..., artifacts=[...])`, passing any published artifact URLs or artifact publishing skip/local records through the structured `artifacts` field.
   - Clear execution state by calling `preq_update_task_status` with the current workflow status from `preq_get_task`.
   - The final saved note must not include the temporary `Ask:` helper block.
 - Else If user objective start with `comment`:
@@ -166,8 +167,8 @@ Load -> Initialize -> Execute -> Finalize
   - Start the current project from the current worktree/branch, determine the local target URL, and run browser QA against that URL.
   - Limit QA to the scoped Ready tasks and the minimal navigation or sanity checks needed to reach and verify them. Do not expand into unrelated full-app exploratory QA. Report unrelated findings only when they block scoped verification or prevent the app from starting.
   - QA reports may include optional artifact references for screenshots, videos, and documents. Use the same `private-or-skip` policy when a safe provider is available.
-  - If QA artifact publishing is skipped after generating local artifacts, record the artifact publishing result or skip reason in the final QA report.
-  - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, and summary counts.
+  - If QA artifact publishing is skipped after generating local artifacts, record the artifact publishing result or skip reason in the structured `artifacts` array, not the markdown report body.
+  - When QA finishes, call `preq_update_qa_run` again with final status (`passed` or `failed`), `target_url`, markdown report, summary counts, and `artifacts=[...]` when artifacts were generated.
   - Do not call `preq_complete_task`, `preq_review_task`, or `preq_block_task` unless this run is also handling a real PREQ task.
 - Else If user objective start with `implement` or `resume`:
   - Implement code changes and run task-level tests.

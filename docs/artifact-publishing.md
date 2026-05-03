@@ -10,7 +10,7 @@ PREQ artifact publishing is best-effort. The baseline contract is:
 - Fast.io is one supported provider, not the only valid target
 - if the provider can create temporary external share or quickshare links, create 7-day expiring reviewer links and record `access=quickshare` plus `expires=...`
 - HTML prototype or HTML mockup artifacts should also get at least one screenshot PNG so reviewers can open a visual artifact
-- notes and QA reports must record the artifact publishing result or skip reason when local artifacts were generated
+- task note and QA report bodies should stay clean; record artifact links, local paths, and skip reasons in structured `artifacts` arrays
 
 ## Fast.io
 
@@ -27,13 +27,29 @@ If the current agent already has an authenticated Fast.io MCP session, treat Fas
 
 Fast.io is not required. If it is missing, unauthenticated, or cannot create an authenticated workspace/share target, the worker should skip publishing and still finish the note or QA report update. In that case, include a concise skip reason so reviewers know why a private link is absent.
 
-For HTML prototypes and mockups, upload the HTML source plus at least one screenshot PNG when an authenticated provider is available. Put reviewer links in the note or QA report under an `Artifacts:` block:
+For HTML prototypes and mockups, upload the HTML source plus at least one screenshot PNG when an authenticated provider is available. Pass reviewer links through the `artifacts` array on `preq_update_task_note`, `preq_complete_task`, or `preq_update_qa_run`:
 
-```md
-Artifacts:
-- [image] Desktop screenshot | provider=fastio | access=quickshare | expires=2026-04-18T00:00:00Z | url=https://...
-- [document] HTML prototype | provider=fastio | access=private-workspace | url=https://...
+```json
+[
+  {
+    "type": "image",
+    "title": "Desktop screenshot",
+    "provider": "fastio",
+    "access": "quickshare",
+    "expires": "2026-04-18T00:00:00Z",
+    "url": "https://..."
+  },
+  {
+    "type": "document",
+    "title": "HTML prototype",
+    "provider": "fastio",
+    "access": "private-workspace",
+    "url": "https://..."
+  }
+]
 ```
+
+If publishing is skipped, still include a structured artifact record with `localPath` and `reason` instead of appending an `Artifacts:` markdown block to the note or QA report.
 
 ## Privacy
 
