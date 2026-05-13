@@ -4,3 +4,8 @@ node_modules/
 .omc
 .claude
 .worktrees/
+
+# Local agent planning artifacts
+.superpowers/
+docs/superpowers/
+superpowers/

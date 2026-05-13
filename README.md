@@ -64,6 +64,12 @@ Then start Claude and run:
 /preqstation:setup
 ```
 
+`/preqstation:setup` can add or verify the user-scoped `preqstation` MCP registration for you. The canonical Claude MCP command is:
+
+```bash
+claude mcp add -s user --transport http preqstation https://<your-domain>/mcp
+```
+
 Codex and Gemini users can install the worker skill and register the remote PREQ MCP server; see [docs/INSTALLATION.md](docs/INSTALLATION.md).
 
 ## Documentation
