@@ -2,6 +2,10 @@
 
 All notable changes to this project are documented in this file.
 
+## 0.1.46 - 2026-05-13
+
+- Documented the read-only `preq_list_project_activity` MCP tool for date-range project sync consumers.
+
 ## 0.1.45 - 2026-05-02
 
 - Clarified that PREQ project deploy settings are explicit run authorization for required commit, push, and PR actions.
